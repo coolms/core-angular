@@ -1,0 +1,37 @@
+{
+    // Build-only tsconfig for ng-packagr. The admin app compiles these same
+    // sources through ITS tsconfig (source consumption via a path mapping), so
+    // this file exists purely to produce a distributable: FESM bundles plus
+    // .d.ts, with @angular/* left as peer imports rather than bundled.
+    //
+    // There is no `extends`: the package deliberately has no toolchain of its
+    // own, and its `node_modules` is a relative symlink to the admin's so that
+    // exactly one @angular tree is ever in play.
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ES2022",
+        "moduleResolution": "bundler",
+        "lib": ["ES2022", "dom"],
+        "strict": true,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": false,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "declaration": true,
+        "sourceMap": true
+    },
+    "angularCompilerOptions": {
+        // `compilationMode: partial` is what makes the output a LIBRARY: the
+        // consumer's own Angular compiler finishes it, so a package built
+        // against 19.x keeps working when the app moves forward.
+        "compilationMode": "partial",
+        "strictInjectionParameters": true,
+        "strictTemplates": true
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["src/**/*.spec.ts"]
+}

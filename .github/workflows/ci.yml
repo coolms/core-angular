@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      # Two things that would each break consumers silently rather than loudly.
+      #
+      # If Angular ends up INSIDE the bundle the package stops being a library:
+      # two copies of the framework in one application fail at runtime, and the
+      # symptom is a blank screen, not an error anyone can search for.
+      #
+      # If the output were fully compiled rather than partial, it would be
+      # pinned to the exact Angular it was built against.
+      #
+      # Both assertions are POSITIVE — they name what must be present, so the
+      # step cannot pass by finding nothing.
+      - name: Library output, framework external
+        run: |
+          bundle=dist/fesm2022/coolms-core-angular.mjs
+          test -f "$bundle"
+          grep -q "from '@angular/core'" "$bundle"
+          grep -q 'ngDeclareInjectable' "$bundle"

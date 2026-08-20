@@ -1,0 +1,42 @@
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+  <div class="card shadow-sm" style="width: 360px">
+    <div class="card-body p-4">
+      <h1 class="h5 mb-1">CoolMS Admin</h1>
+      <p class="text-muted small mb-4">Sign in to continue</p>
+
+      <div *ngIf="error" class="alert alert-danger py-2 small">{{ error }}</div>
+
+      <form (ngSubmit)="submit()" #loginForm="ngForm">
+        <div class="mb-3">
+          <label class="form-label">Email or username</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="identifier"
+            name="identifier"
+            required
+            autocomplete="username"
+          />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            [(ngModel)]="password"
+            name="password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <button
+          type="submit"
+          class="cms-btn cms-btn-primary w-100 justify-content-center"
+          [disabled]="loading || loginForm.invalid"
+        >
+          {{ loading ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

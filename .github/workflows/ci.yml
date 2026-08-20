@@ -13,7 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['20', '22']
+        # Angular 22 requires Node ^22.22.3 || ^24.15.0 || >=26, so the
+        # 20 leg cannot install any more.
+        node: ['22', '24']
 
     steps:
       - uses: actions/checkout@v4

@@ -1,52 +1,57 @@
 {
-    "name": "@coolms/core-angular",
-    "version": "0.2.0",
-    "private": true,
-    "description": "The CoolMS client runtime for Angular: session and token refresh, boot manifest and app configuration, theme, user preferences, error handling, HTTP interceptors, and the wire types the CoolMS API emits.",
-    "license": "MIT",
-    "author": {
-        "name": "Dmitry Popov",
-        "email": "d.popov@coolms.com"
-    },
-    "type": "module",
-    "peerDependencies": {
-        "@angular/common": "^22.0.0",
-        "@angular/core": "^22.0.0",
-        "@angular/forms": "^22.0.0",
-        "@angular/router": "^22.0.0",
-        "@ngxs/store": "^22.0.0",
-        "rxjs": "^7.8.0"
-    },
-    "engines": {
-        "node": ">=20"
-    },
-    "keywords": [
-        "coolms",
-        "angular",
-        "cms",
-        "client",
-        "runtime"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/coolms/core-angular.git"
-    },
-    "scripts": {
-        "build": "ng-packagr -p ng-package.json -c tsconfig.lib.json",
-        "typecheck": "tsc -p tsconfig.lib.json --noEmit",
-        "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
-    },
-    "devDependencies": {
-        "@angular/common": "^22.0.0",
-        "@angular/compiler": "^22.0.0",
-        "@angular/compiler-cli": "^22.0.0",
-        "@angular/core": "^22.0.0",
-        "@angular/forms": "^22.0.0",
-        "@angular/router": "^22.0.0",
-        "@ngxs/store": "^22.0.0",
-        "ng-packagr": "^22.1.1",
-        "rxjs": "^7.8.0",
-        "tslib": "^2.3.0",
-        "typescript": "^6.0.0"
-    }
+  "name": "@coolms/core-angular",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The CoolMS client runtime for Angular: session and token refresh, boot manifest and app configuration, theme, user preferences, error handling, HTTP interceptors, and the wire types the CoolMS API emits.",
+  "license": "MIT",
+  "author": {
+    "name": "Dmitry Popov",
+    "email": "d.popov@coolms.com"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "@ngxs/store": "^22.0.0",
+    "rxjs": "^7.8.0"
+  },
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26"
+  },
+  "keywords": [
+    "coolms",
+    "angular",
+    "cms",
+    "client",
+    "runtime"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coolms/core-angular.git"
+  },
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json -c tsconfig.lib.json",
+    "typecheck": "tsc -p tsconfig.lib.json --noEmit",
+    "lint": "eslint 'src/**/*.ts'",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/compiler-cli": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "@ngxs/store": "^22.0.0",
+    "angular-eslint": "^22.1.0",
+    "eslint": "^9.28.0",
+    "globals": "^15.15.0",
+    "ng-packagr": "^22.1.1",
+    "rxjs": "^7.8.0",
+    "tslib": "^2.3.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.33.1"
+  }
 }

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
@@ -17,7 +17,8 @@ export class LoginComponent {
     loading = false;
     error: string | null = null;
 
-    constructor(private store: Store, private router: Router) {}
+    private readonly store  = inject(Store);
+    private readonly router = inject(Router);
 
     submit(): void {
         if (!this.identifier || !this.password) return;
@@ -27,7 +28,14 @@ export class LoginComponent {
 
         this.store.dispatch(new Login(this.identifier, this.password)).subscribe({
             next: () => {
-                this.router.navigate(['/']);
+                // A rejected navigation used to vanish: nothing resets `loading`
+                // on the success path, because the page is expected to go
+                // away. If it does not, the form spins for ever with no reason
+                // given, so say so instead.
+                void this.router.navigate(['/']).catch(() => {
+                    this.loading = false;
+                    this.error = 'Signed in, but the admin could not be opened. Please reload.';
+                });
             },
             error: (err) => {
                 this.loading = false;

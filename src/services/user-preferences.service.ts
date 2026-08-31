@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { Subject, debounceTime } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
-import { DataGridPreference } from './user-preferences.types';
+import { type DataGridPreference } from './user-preferences.types';
 
 /**
  * Unified user preferences service — all preference types share one

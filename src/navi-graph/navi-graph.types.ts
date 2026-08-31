@@ -7,7 +7,10 @@
  *   'route'         — navigate via routerLink (default when target absent)
  *   '_blank'        — open in a new tab (hrefOverride must be set)
  */
-export type NaviGraphTarget = 'action.logout' | 'route' | '_blank' | string;
+// `& {}` rather than a bare `| string`, which absorbs the three literals and
+// leaves the type meaning "any string" -- the docblock above would then be
+// describing a union the compiler had already erased.
+export type NaviGraphTarget = 'action.logout' | 'route' | '_blank' | (string & {});
 
 export interface NaviGraphMeta {
     readonly component?:       string;           // e.g. 'identity.signout'

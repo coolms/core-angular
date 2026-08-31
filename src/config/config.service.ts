@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { map, Observable, shareReplay } from 'rxjs';
+import { map, type Observable, shareReplay } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
 
 /**
@@ -140,7 +140,7 @@ export class ConfigService {
             // { type, id, data: { ...yaml content... } }
             // Unwrap so callers always receive the config payload directly.
             const obs  = this.http.get<{ data?: T } & T>(`${base}/${type}/${id}`).pipe(
-                map(r => (r.data !== undefined ? r.data : r) as T),
+                map(r => (r.data ?? r) as T),
                 shareReplay(1),
             );
             this.cache.set(key, obs);

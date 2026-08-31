@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { State, Action, Selector } from '@ngxs/store';
 import type { StateContext } from '@ngxs/store';
-import { ApiManifest, ThemeConfigResponse, ViewerApiManifest } from '../api/api-manifest.types';
+import { type ApiManifest, type ThemeConfigResponse, type ViewerApiManifest } from '../api/api-manifest.types';
 
 // ─── Action ──────────────────────────────────────────────────────────────────
 

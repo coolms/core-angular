@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { State, Action, Selector } from '@ngxs/store';
 import type { StateContext } from '@ngxs/store';
 import { catchError, of } from 'rxjs';
@@ -23,10 +23,13 @@ const STORAGE_KEY = 'coolms_token';
 })
 @Injectable()
 export class AuthState {
-    constructor(
-        private api:   IdentityApiClient,
-        private prefs: UserPreferencesService,
-    ) {}
+    // `inject()` rather than constructor parameters, and the imports above are
+    // VALUE imports on purpose: an injected type must survive to runtime. As a
+    // constructor parameter that is invisible to `tsc`, which type-checks a
+    // type-only import happily and leaves the Angular compiler to fail with
+    // NG2003. Read as a value here, so the same mistake is a type error.
+    private readonly api   = inject(IdentityApiClient);
+    private readonly prefs = inject(UserPreferencesService);
 
     @Action(Login)
     login(ctx: StateContext<AuthStateModel>, { identifier, password }: Login) {

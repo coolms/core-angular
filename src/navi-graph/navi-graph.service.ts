@@ -2,9 +2,9 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
-import { catchError, map, Observable, of } from 'rxjs';
+import { catchError, map, type Observable, of } from 'rxjs';
 import { Logout } from '../auth/auth.actions';
-import { NaviGraphNode, NaviGraphNodeFlat } from './navi-graph.types';
+import { type NaviGraphNode, type NaviGraphNodeFlat } from './navi-graph.types';
 import { ErrorHandlerService } from '../errors/error-handler.service';
 
 /**

@@ -29,7 +29,9 @@
 export * from './api/api-manifest.types';
 export * from './api/auth.types';
 export * from './api/form-render.types';
+export * from './api/hydra.types';
 export * from './api/identity-api.client';
+export * from './api/realtime-token.client';
 
 // ── Session ──────────────────────────────────────────────────────────────────
 export * from './auth/auth.actions';
@@ -49,6 +51,11 @@ export * from './state/app-config.state';
 // ── Cross-cutting services ───────────────────────────────────────────────────
 export * from './errors/error-handler.service';
 export * from './theme/theme.service';
+// The platform's loader mark. It lives here rather than in the UI kit
+// because the kit is not the lowest layer that needs it: the editor sits
+// ABOVE the kit and still has to show it, and a second copy of a brand
+// mark is worse than a component in a runtime package.
+export * from './loader/cms-loader.component';
 export * from './services/user-preferences.service';
 export * from './services/user-preferences.types';
 export * from './sidebar/sidebar-state.service';

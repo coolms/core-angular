@@ -96,7 +96,11 @@ export interface FieldItem {
 }
 
 export interface LayoutNode {
-    readonly type:                 'group' | 'grid' | 'column' | 'tabs' | 'tab' | string; // layout containers or field alias
+    // A layout container, or a field alias. The `& {}` is what keeps the five
+    // names meaningful: a bare `| string` absorbs them, so the union listed
+    // five options the compiler had already collapsed to `string` -- no
+    // completion, no checking, just documentation that looked like a type.
+    readonly type:                 'group' | 'grid' | 'column' | 'tabs' | 'tab' | (string & {});
     readonly name?:                string;
     readonly description?:         string;
     readonly compact?:             boolean;

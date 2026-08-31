@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -10,11 +10,22 @@ import { BYPASS_AUTH } from '../auth/auth.interceptor';
 import { AuthRefreshCoordinator } from '../auth/auth-refresh.coordinator';
 import { CrossTabAuthSyncService } from '../auth/cross-tab-auth-sync.service';
 import { SetAppConfig } from '../state/app-config.state';
-import { ThemeConfigResponse } from '../api/api-manifest.types';
+import { type ThemeConfigResponse } from '../api/api-manifest.types';
 import { UserPreferencesService } from '../services/user-preferences.service';
 
 @Injectable({ providedIn: 'root' })
 export class AppInitService {
+    // Injected as values, not constructor parameters: an injection token has to
+    // exist at runtime, and a type-only import of one type-checks clean while
+    // the Angular compiler rejects it with NG2003.
+    private readonly http               = inject(HttpClient);
+    private readonly store              = inject(Store);
+    private readonly router             = inject(Router);
+    private readonly location           = inject(Location);
+    private readonly prefs              = inject(UserPreferencesService);
+    private readonly crossTabSync       = inject(CrossTabAuthSyncService);
+    private readonly refreshCoordinator = inject(AuthRefreshCoordinator);
+
     /** The only hardcoded URL — everything else comes from the manifest. */
     private readonly configUrl = '/api/v1/theme/config';
 
@@ -25,16 +36,6 @@ export class AppInitService {
      */
     private readonly initComplete = new ReplaySubject<void>(1);
     readonly ready$ = this.initComplete.asObservable();
-
-    constructor(
-        private readonly http:        HttpClient,
-        private readonly store:       Store,
-        private readonly router:      Router,
-        private readonly location:    Location,
-        private readonly prefs:       UserPreferencesService,
-        private readonly crossTabSync: CrossTabAuthSyncService,
-        private readonly refreshCoordinator: AuthRefreshCoordinator,
-    ) {}
 
     async load(): Promise<void> {
         // ── Step 0: cross-tab sync ────────────────────────────────────────────

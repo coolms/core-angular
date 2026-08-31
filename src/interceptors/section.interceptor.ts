@@ -6,10 +6,24 @@ import { CURRENT_SECTION } from '../section/current-section.port';
  * Phase H7 -- admin Site Selector.
  *
  * Stamps `X-CoolMS-Section: <slug>` on outgoing `/api/v1/*` requests when
- * the admin has picked a section from the Site Selector dropdown. The
- * backend honours the header for authenticated users and scopes
- * site-specific API providers (pages, media spaces, etc.) to the
- * selected site.
+ * the admin has picked a section from the Site Selector dropdown. The backend
+ * honours it for AUTHENTICATED requests only -- anonymous traffic cannot pivot
+ * the active section.
+ *
+ * What the header actually reaches, counted rather than intended: exactly two
+ * readers act on it, `CreatePageProcessor` and `CreateCollectionProcessor`,
+ * each choosing WHICH SITE a newly created page or collection lands in -- and,
+ * for a page, that section's default locale and slug-naming policy. Nothing
+ * else is scoped by it. Media spaces list every active section regardless, and
+ * every other reader of `_coolms_section` sits on the public SSR surface,
+ * which resolves from host+path and never sees this header.
+ *
+ * This block used to say the backend "scopes site-specific API providers
+ * (pages, media spaces, etc.)". That described where Phase H was heading --
+ * H4/H5, multisite Document and Media, never landed -- not what it does. Left
+ * recorded because a docstring naming an intended destination reads exactly
+ * like one naming a shipped feature, and this one misdescribed the control for
+ * three months.
  *
  * Skipped:
  *  - non-API URLs (no section context needed for SSR/static)

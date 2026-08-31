@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
-import { Observable, catchError, defer, finalize, firstValueFrom, from, shareReplay, throwError } from 'rxjs';
+import { type Observable, catchError, defer, finalize, firstValueFrom, from, shareReplay, throwError } from 'rxjs';
 
 import { IdentityApiClient } from '../api/identity-api.client';
 import { AuthState } from './auth.state';

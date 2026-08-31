@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { Observable } from 'rxjs';
+import { type Observable } from 'rxjs';
 
 import { AppConfigState } from '../state/app-config.state';
 import type { ApiManifest } from './api-manifest.types';

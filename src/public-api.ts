@@ -25,7 +25,7 @@
  * rebuild one against endpoints only core knows.
  */
 
-// ── Wire types + the API client core owns ────────────────────────────────────
+// -- Wire types + the API client core owns ------------------------------------
 export * from './api/api-manifest.types';
 export * from './api/auth.types';
 export * from './api/form-render.types';
@@ -33,7 +33,7 @@ export * from './api/hydra.types';
 export * from './api/identity-api.client';
 export * from './api/realtime-token.client';
 
-// ── Session ──────────────────────────────────────────────────────────────────
+// -- Session ------------------------------------------------------------------
 export * from './auth/auth.actions';
 export * from './auth/auth.state';
 export * from './auth/auth.guard';
@@ -43,12 +43,12 @@ export * from './auth/auth-refresh.coordinator';
 export * from './auth/cross-tab-auth-sync.service';
 export * from './auth/login/login.component';
 
-// ── Boot + configuration ─────────────────────────────────────────────────────
+// -- Boot + configuration -----------------------------------------------------
 export * from './bootstrap/app-init.service';
 export * from './config/config.service';
 export * from './state/app-config.state';
 
-// ── Cross-cutting services ───────────────────────────────────────────────────
+// -- Cross-cutting services ---------------------------------------------------
 export * from './errors/error-handler.service';
 export * from './theme/theme.service';
 // The platform's loader mark. It lives here rather than in the UI kit
@@ -61,12 +61,12 @@ export * from './services/user-preferences.types';
 export * from './sidebar/sidebar-state.service';
 export * from './entity-search/entity-search.service';
 
-// ── Navigation graph ─────────────────────────────────────────────────────────
+// -- Navigation graph ---------------------------------------------------------
 export * from './navi-graph/navi-graph.service';
 export * from './navi-graph/navi-graph.types';
 export * from './navi-graph/component-registry';
 
-// ── Section scoping ──────────────────────────────────────────────────────────
+// -- Section scoping ----------------------------------------------------------
 // The interceptor stamps `X-CoolMS-Section`; the port is how the app tells it
 // which section is active without core naming a feature.
 export * from './interceptors/section.interceptor';

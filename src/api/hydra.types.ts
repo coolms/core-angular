@@ -10,7 +10,7 @@
  * `@context`, so the wire carries `member` and `totalItems` rather than
  * `hydra:member` and `hydra:totalItems`.
  *
- * ⚠️ Three document services in the admin declare their own version of this
+ *  Three document services in the admin declare their own version of this
  * interface accepting BOTH spellings, every field optional. That is a
  * different claim about the same wire, not a duplicate of this one, and
  * whichever is wrong is wrong silently -- an optional `member` makes every

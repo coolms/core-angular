@@ -64,7 +64,7 @@ export class SidebarStateService {
         this.persistSections(next);
     }
 
-    // ─── Per-item inline-expand (sub-tree items, e.g. a section's children) ──
+    // --- Per-item inline-expand (sub-tree items, e.g. a section's children) --
 
     isItemCollapsed(id: string): boolean {
         return this.collapsedItems().has(id);

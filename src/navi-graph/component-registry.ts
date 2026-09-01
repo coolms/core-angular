@@ -17,7 +17,7 @@ import { Injectable, type Type } from '@angular/core';
 export class ComponentRegistry {
     private static readonly map = new Map<string, Type<unknown>>();
 
-    // ── Static API (bootstrap / app.config.ts) ───────────────────────────────
+    // -- Static API (bootstrap / app.config.ts) -------------------------------
 
     static register(key: string, component: Type<unknown>): void {
         ComponentRegistry.map.set(key, component);
@@ -35,7 +35,7 @@ export class ComponentRegistry {
         return Array.from(ComponentRegistry.map.keys());
     }
 
-    // ── Instance API (injectable) ─────────────────────────────────────────────
+    // -- Instance API (injectable) ---------------------------------------------
 
     register(key: string, component: Type<unknown>): void {
         ComponentRegistry.register(key, component);

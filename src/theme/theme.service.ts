@@ -18,7 +18,7 @@ const CHOICES: readonly ThemeChoice[] = ['light', 'dark', 'system'];
  * A CACHE, never a source of truth.
  *
  * The authoritative value is `preferences.theme` in `/auth/me/settings`, which
- * the Profile → Preferences tab already writes. This copy exists only so the
+ * the Profile -> Preferences tab already writes. This copy exists only so the
  * first paint of a reload is the right colour: the settings request is async,
  * so without it every load would start light and flip. It is deliberately NOT
  * stored via UserPreferencesService, which syncs its own bag to the server —

@@ -3,14 +3,14 @@ import { State, Action, Selector } from '@ngxs/store';
 import type { StateContext } from '@ngxs/store';
 import { type ApiManifest, type ThemeConfigResponse, type ViewerApiManifest } from '../api/api-manifest.types';
 
-// ─── Action ──────────────────────────────────────────────────────────────────
+// --- Action ------------------------------------------------------------------
 
 export class SetAppConfig {
     static readonly type = '[AppConfig] Set';
     constructor(public readonly config: ThemeConfigResponse) {}
 }
 
-// ─── State ───────────────────────────────────────────────────────────────────
+// --- State -------------------------------------------------------------------
 
 export interface AppConfigStateModel {
     config:  ThemeConfigResponse | null;

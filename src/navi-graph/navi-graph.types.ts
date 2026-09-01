@@ -1,4 +1,4 @@
-// ─── NaviGraph API types ──────────────────────────────────────────────────────
+// --- NaviGraph API types ------------------------------------------------------
 // Mirror the PHP NaviGraphNodeResource DTO exactly. No `any` allowed.
 
 /**

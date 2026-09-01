@@ -50,7 +50,7 @@ export class UserPreferencesService {
         ).subscribe(prefs => this.syncToServer(prefs));
     }
 
-    // ── Core helpers ─────────────────────────────────────────────────────────
+    // -- Core helpers ---------------------------------------------------------
 
     /**
      * Write all prefs to localStorage and schedule a debounced server sync.
@@ -81,7 +81,7 @@ export class UserPreferencesService {
     private migrate(all: Record<string, unknown>): Record<string, unknown> {
         let dirty = false;
 
-        // terminal_height → terminal.height
+        // terminal_height -> terminal.height
         if (typeof all['terminal_height'] === 'number') {
             const terminal = (all['terminal'] ?? {}) as Record<string, unknown>;
             terminal['height'] = all['terminal_height'];
@@ -90,7 +90,7 @@ export class UserPreferencesService {
             dirty = true;
         }
 
-        // media_view_mode → page.media.viewMode
+        // media_view_mode -> page.media.viewMode
         if (typeof all['media_view_mode'] === 'string') {
             const page  = (all['page']  ?? {}) as Record<string, unknown>;
             const media = (page['media'] ?? {}) as Record<string, unknown>;
@@ -101,7 +101,7 @@ export class UserPreferencesService {
             dirty = true;
         }
 
-        // media_collections_panel → panel.media_panel_left  (matches persistKey in media-library.yaml)
+        // media_collections_panel -> panel.media_panel_left  (matches persistKey in media-library.yaml)
         if (all['media_collections_panel'] && typeof all['media_collections_panel'] === 'object') {
             const panel = (all['panel'] ?? {}) as Record<string, unknown>;
             panel['media_panel_left'] = all['media_collections_panel'];
@@ -123,7 +123,7 @@ export class UserPreferencesService {
             }
         }
 
-        // Grid keys: any top-level object with `columns` or `columnWidths` → grids.{key}
+        // Grid keys: any top-level object with `columns` or `columnWidths` -> grids.{key}
         for (const key of Object.keys(all)) {
             if (NAMESPACES.has(key)) continue;
             const val = all[key];
@@ -146,15 +146,15 @@ export class UserPreferencesService {
         return all;
     }
 
-    // ── Server sync ──────────────────────────────────────────────────────────
+    // -- Server sync ----------------------------------------------------------
 
     /**
      * Seed localStorage from server preferences.
      * Called after login and on every session restore (page reload).
      *
      * Strategy:
-     *  - No local prefs yet (new device / clean install) → use server prefs as-is.
-     *  - Local prefs already exist → merge with local taking priority at each
+     *  - No local prefs yet (new device / clean install) -> use server prefs as-is.
+     *  - Local prefs already exist -> merge with local taking priority at each
      *    top-level namespace.  This ensures that locally-persisted state
      *    (panel widths, last path, etc.) is never overwritten by the stale copy
      *    that was saved in the auth token at login time.
@@ -189,7 +189,7 @@ export class UserPreferencesService {
         });
     }
 
-    // ── Grids ────────────────────────────────────────────────────────────────
+    // -- Grids ----------------------------------------------------------------
 
     /**
      * Get stored preferences for a specific grid.
@@ -250,7 +250,7 @@ export class UserPreferencesService {
         this.save(all);
     }
 
-    // ── Terminal ─────────────────────────────────────────────────────────────
+    // -- Terminal -------------------------------------------------------------
 
     /**
      * Get persisted terminal panel height.
@@ -272,7 +272,7 @@ export class UserPreferencesService {
         this.save(all);
     }
 
-    // ── Panel ────────────────────────────────────────────────────────────────
+    // -- Panel ----------------------------------------------------------------
 
     /**
      * Get persisted state for a resizable panel identified by key.
@@ -304,7 +304,7 @@ export class UserPreferencesService {
         this.save(all);
     }
 
-    // ── Page state ───────────────────────────────────────────────────────────
+    // -- Page state -----------------------------------------------------------
 
     /**
      * Get all persisted state for a page namespace (e.g. 'vfs', 'media', 'nav').
@@ -331,7 +331,7 @@ export class UserPreferencesService {
         this.save(all);
     }
 
-    // ── Media (legacy pass-through — kept for compatibility) ─────────────────
+    // -- Media (legacy pass-through — kept for compatibility) -----------------
 
     /** @deprecated Use getPageState('media') instead */
     getMediaViewMode(): string | null {

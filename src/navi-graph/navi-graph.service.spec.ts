@@ -45,7 +45,7 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
         svc = TestBed.inject(NaviGraphService);
     });
 
-    // 1. No showWhen → always visible
+    // 1. No showWhen -> always visible
     it('returns true when node has no showWhen meta', () => {
         const node = nodeWith(undefined);
         expect(svc.isVisible(node, { anything: 'goes' })).toBe(true);
@@ -63,13 +63,13 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
         expect(svc.isVisible(node, { _kind: 'collection' })).toBe(false);
     });
 
-    // 4. eq op, field missing → STRICT: false
+    // 4. eq op, field missing -> STRICT: false
     it('returns false for eq when field is missing from record', () => {
         const node = nodeWith({ field: '_kind', op: 'eq', value: 'asset' });
         expect(svc.isVisible(node, { _surface: 'context' })).toBe(false);
     });
 
-    // 5. ne op, field missing → STRICT: false (lax used to return true)
+    // 5. ne op, field missing -> STRICT: false (lax used to return true)
     it('returns false for ne when field is missing from record (strict flip)', () => {
         const node = nodeWith({ field: 'isSystem', op: 'ne', value: true });
         expect(svc.isVisible(node, { _kind: 'asset' })).toBe(false);
@@ -81,19 +81,19 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
         expect(svc.isVisible(node, { isSystem: false })).toBe(true);
     });
 
-    // 7. in op, field missing → false
+    // 7. in op, field missing -> false
     it('returns false for in when field is missing', () => {
         const node = nodeWith({ field: 'type', op: 'in', value: ['file', 'directory'] });
         expect(svc.isVisible(node, {})).toBe(false);
     });
 
-    // 8. Unknown op (typo) → STRICT: false (lax used to return true via default branch)
+    // 8. Unknown op (typo) -> STRICT: false (lax used to return true via default branch)
     it('returns false for unknown op (defensive against typos — strict flip)', () => {
         const node = nodeWith({ field: '_kind', op: 'equals', value: 'asset' });
         expect(svc.isVisible(node, { _kind: 'asset' })).toBe(false);
     });
 
-    // 9. AND composition with one missing field → false
+    // 9. AND composition with one missing field -> false
     it('AND with missing field in one branch returns false', () => {
         const node = nodeWith({
             and: [
@@ -104,7 +104,7 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
         expect(svc.isVisible(node, { _kind: 'asset' })).toBe(false);
     });
 
-    // 10. OR composition with one missing field, other match → true
+    // 10. OR composition with one missing field, other match -> true
     it('OR with missing field in one branch but match in the other returns true', () => {
         const node = nodeWith({
             or: [
@@ -112,7 +112,7 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
                 { field: '_surface', op: 'eq', value: 'context' },
             ],
         });
-        // mimeType missing → first branch false; _surface present + matches → second branch true.
+        // mimeType missing -> first branch false; _surface present + matches -> second branch true.
         expect(svc.isVisible(node, { _surface: 'context' })).toBe(true);
     });
 });

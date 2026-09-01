@@ -19,7 +19,7 @@ import { CURRENT_SECTION } from '../section/current-section.port';
  * which resolves from host+path and never sees this header.
  *
  * This block used to say the backend "scopes site-specific API providers
- * (pages, media spaces, etc.)". That described where Phase H was heading --
+ * (pages, media spaces, etc.)". That described where was heading --
  * H4/H5, multisite Document and Media, never landed -- not what it does. Left
  * recorded because a docstring naming an intended destination reads exactly
  * like one naming a shipped feature, and this one misdescribed the control for

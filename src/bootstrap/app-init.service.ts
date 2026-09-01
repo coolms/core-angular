@@ -38,7 +38,7 @@ export class AppInitService {
     readonly ready$ = this.initComplete.asObservable();
 
     async load(): Promise<void> {
-        // ── Step 0: cross-tab sync ────────────────────────────────────────────
+        // -- Step 0: cross-tab sync --------------------------------------------
         //
         // Install the storage-event listener before RestoreSession so that
         // any localStorage mutation from a sibling tab during bootstrap
@@ -46,7 +46,7 @@ export class AppInitService {
         // into this tab's NGXS state.
         this.crossTabSync.start();
 
-        // ── Step 1: restore tokens from localStorage ──────────────────────────
+        // -- Step 1: restore tokens from localStorage --------------------------
         //
         // RestoreSession is synchronous (ctx.setState from localStorage), so
         // this await resolves in the same microtask.  Tokens are in NGXS state
@@ -55,7 +55,7 @@ export class AppInitService {
         // ordering prevents unauthenticated requests on page reload (F5).
         await firstValueFrom(this.store.dispatch(new RestoreSession()));
 
-        // ── Step 2: fetch the manifest ────────────────────────────────────────
+        // -- Step 2: fetch the manifest ----------------------------------------
         //
         // BYPASS_AUTH is required here — not optional.  The manifest endpoint
         // is public, but two specific failure modes make bypassing necessary:
@@ -85,7 +85,7 @@ export class AppInitService {
             ),
         );
 
-        // ── Step 3: validate the restored session ─────────────────────────────
+        // -- Step 3: validate the restored session -----------------------------
         //
         // RestoreSession trusts whatever tokens are in localStorage, but they may
         // have been revoked out-of-band — most notably, signing out on the public
@@ -93,7 +93,7 @@ export class AppInitService {
         // auth state here, BEFORE step 4 signals ready$: both the auth interceptor
         // AND authGuard gate on ready$, so if we signalled first, the guard would
         // race ahead and mount the shell against the stale isAuthenticated=true
-        // before this probe finished (→ half-loaded shell + "Session expired"
+        // before this probe finished (-> half-loaded shell + "Session expired"
         // toasts, the exact bug this fixes). Because the probe itself cannot wait
         // on ready$ (that would deadlock), validateSession() bypasses the
         // interceptor and attaches the token / drives the refresh by hand.
@@ -102,7 +102,7 @@ export class AppInitService {
             await this.validateSession(meUrl);
         }
 
-        // ── Step 4: signal authGuard + unblock the interceptor ────────────────
+        // -- Step 4: signal authGuard + unblock the interceptor ----------------
         //
         // Auth state is now settled (session confirmed, refreshed, or Logout
         // dispatched). ReplaySubject(1) replays to guards/requests that subscribe
@@ -110,7 +110,7 @@ export class AppInitService {
         this.initComplete.next();
         this.initComplete.complete();
 
-        // ── Step 5: navigate to last-visited route ────────────────────────────
+        // -- Step 5: navigate to last-visited route ----------------------------
         //
         // Only when the session survived validation. If it did not, isAuthenticated
         // is now false, we skip the saved-route navigation, and authGuard sends the
@@ -141,8 +141,8 @@ export class AppInitService {
      * app unblocks. Runs OUTSIDE the auth interceptor (BYPASS_AUTH) because the
      * interceptor queues behind ready$, which has not fired yet at this point.
      *
-     *   • access token accepted  → done, session alive;
-     *   • access token rejected  → attempt ONE refresh (access tokens are short-lived,
+     *   - access token accepted  -> done, session alive;
+     *   - access token rejected  -> attempt ONE refresh (access tokens are short-lived,
      *                              so an expired one with a valid refresh token must
      *                              stay logged in). The coordinator dispatches Logout
      *                              on a refresh 401 and SetTokens on success; a
@@ -163,7 +163,7 @@ export class AppInitService {
         try {
             refreshedToken = await firstValueFrom(this.refreshCoordinator.refresh(refreshToken));
         } catch {
-            // 401 → coordinator already dispatched Logout; transient → session kept.
+            // 401 -> coordinator already dispatched Logout; transient -> session kept.
             return;
         }
         // Refresh resolved — but the coordinator's fresh-state optimisation can hand

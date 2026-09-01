@@ -251,7 +251,7 @@ export interface ThemeConfigResponse {
  *
  * @example
  *   resolvePattern(manifest.sections!.item, { id: '123' })
- *   // → '/api/v1/sections/123'
+ *   // -> '/api/v1/sections/123'
  */
 export function resolvePattern(pattern: string, params: Record<string, string>): string {
     return Object.entries(params).reduce(

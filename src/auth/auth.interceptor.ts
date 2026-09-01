@@ -11,7 +11,7 @@ import { AuthRefreshCoordinator } from './auth-refresh.coordinator';
 import { AppInitService } from '../bootstrap/app-init.service';
 import { catchError, switchMap, take, throwError } from 'rxjs';
 
-// ── Opt-out context token ─────────────────────────────────────────────────────
+// -- Opt-out context token -----------------------------------------------------
 //
 // Set BYPASS_AUTH to true on any HttpRequest to skip adding the Authorization
 // header entirely.  Used by AppInitService for the bootstrap config request so
@@ -19,7 +19,7 @@ import { catchError, switchMap, take, throwError } from 'rxjs';
 
 export const BYPASS_AUTH = new HttpContextToken<boolean>(() => false);
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const store       = inject(Store);
@@ -45,12 +45,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     // localStorage (RestoreSession) is guaranteed to be in NGXS state before
     // we read it.  On F5 the interceptor fires synchronously for every pending
     // request before APP_INITIALIZER has completed; without this guard the
-    // token snapshot is null and every request gets a 401 → refresh cycle even
+    // token snapshot is null and every request gets a 401 -> refresh cycle even
     // for a perfectly valid session.
     //
     // ready$ is a ReplaySubject(1) that completes after load() finishes, so:
-    //   • requests fired during init queue here and flush the moment ready$ emits;
-    //   • requests fired after init pass through take(1) immediately (replayed value).
+    //   - requests fired during init queue here and flush the moment ready$ emits;
+    //   - requests fired after init pass through take(1) immediately (replayed value).
     return initService.ready$.pipe(
         take(1),
         switchMap(() => {

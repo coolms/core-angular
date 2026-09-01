@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
  * The platform's loading indicator: the exclamation mark from Cool!MS,
- * drawing itself (#2073).
+ * drawing itself.
  *
  * ## Why a mark and not a spinner
  *

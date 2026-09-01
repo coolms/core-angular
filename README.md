@@ -67,7 +67,7 @@ deliberate step that has not been taken. Clearing the flag is what enables
 
 ## Requirements
 
-Angular 19, NGXS 19, RxJS 7.8.
+Angular, NGXS, RxJS and `@angular/cdk` are peers; the supported ranges are declared in `package.json`, which is what an install actually checks.
 
 ## Licence
 

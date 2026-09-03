@@ -58,12 +58,13 @@ class while the package is consumed from source.
 
 ## Status
 
-Consumed today from source, via a TypeScript path mapping in the CoolMS admin
-application — the same way `@coolms/editor-angular` is.
+A pre-release: the shape is still moving and it carries no compatibility
+promise. Published under the `alpha` dist-tag; `latest` will move to the first
+stable release when there is one.
 
-Still marked `private`: the distributable builds, but publishing to npm is a
-deliberate step that has not been taken. Clearing the flag is what enables
-`npm publish dist`.
+The CoolMS admin application consumes it from source via a TypeScript path
+mapping rather than from the registry, so the published build and the one the
+admin runs are produced the same way but resolved differently.
 
 ## Requirements
 

@@ -1,6 +1,6 @@
 {
   "name": "@coolms/core-angular",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "description": "The CoolMS client runtime for Angular: session and token refresh, boot manifest and app configuration, theme, user preferences, error handling, HTTP interceptors, and the wire types the CoolMS API emits.",
   "license": "MIT",
   "author": {

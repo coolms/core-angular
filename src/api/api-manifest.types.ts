@@ -92,6 +92,22 @@ export interface VfsApiManifest {
  */
 export interface DocumentApiManifest {
     readonly spacesUrl?: string;  // GET /api/v1/document/spaces
+
+    /**
+     * ⚠️ Carried here rather than derived from `spacesUrl`. Concatenating
+     * `/available` onto that would couple the client to a URL shape the router
+     * owns, and it would keep working until the route moved — then fail as a
+     * 404 the UI reports as "no sites available", which is indistinguishable
+     * from the true empty answer.
+     *
+     * ⚠️ ABSENT ARRIVES AS `''`, NOT `undefined`. The producer declares these
+     * as non-nullable strings defaulting to empty, so an installation that has
+     * not set them sends an empty string and the `?` here never fires. Guard on
+     * falsiness — `!url`, `Boolean(url)` — and never on `?? fallback` or
+     * `=== undefined`, which read as present and hand a caller a request to ''.
+     */
+    readonly spacesAvailableUrl?: string;  // GET  /api/v1/document/spaces/available
+    readonly spaceEnablementUrl?: string;  // POST /api/v1/document/spaces/enablement
 }
 
 export interface DynamicEntityApiManifest {

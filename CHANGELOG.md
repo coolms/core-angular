@@ -9,6 +9,18 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+## Unreleased
+
+### Added
+
+**`DocumentApiManifest` gained `spacesAvailableUrl` and `spaceEnablementUrl`.**
+Optional, mirroring the backend manifest DTO. They let the Documents space
+accordion offer an *Add space* control instead of only ever losing entries when
+a site is not enabled for documents.
+
+Both optional, so a client built against an older backend simply hides the
+control rather than showing one that cannot work.
+
 ## 2.0.0-alpha.3 — 2026-09-03
 
 **A pre-release, carrying no compatibility promise.** Published under the

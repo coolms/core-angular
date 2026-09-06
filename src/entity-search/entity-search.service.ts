@@ -7,7 +7,7 @@ import { type Observable } from 'rxjs';
  * what the picker emits via its `valueChange` output (and what the
  * template's persisted context carries). `label` is the primary
  * display line. `secondary` is an optional second line for
- * disambiguation (email, slug, etc.) — the backend omits the key
+ * disambiguation (email, slug, etc.) -- the backend omits the key
  * when there is nothing to show; receiving `null` from a custom
  * resolver is normalized to `undefined` here.
  */
@@ -20,7 +20,7 @@ export interface EntitySearchResult {
 /**
  * HTTP client for the Phase 2a `/api/entity-search` endpoint.
  * Returns a stream of search results for the given entity FQCN.
- * Permission filtering happens at the backend resolver layer —
+ * Permission filtering happens at the backend resolver layer --
  * this service is a thin RPC.
  */
 @Injectable({ providedIn: 'root' })
@@ -31,7 +31,7 @@ export class EntitySearchService {
      * @param entityType  Fully-qualified PHP class name of the entity
      *                    being searched (e.g. the backend's User entity).
      * @param query       Free-text search input. Empty string is
-     *                    valid — the backend returns the default
+     *                    valid -- the backend returns the default
      *                    listing for that entity type.
      * @param limit       Max rows to return; clamped server-side to
      *                    [1, 100].

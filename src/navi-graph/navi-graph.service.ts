@@ -50,9 +50,9 @@ export class NaviGraphService {
      * Handle a nav-node click.
      *
      * Routing logic based on meta.target:
-     *   'action.logout'  — dispatch Logout
-     *   '_blank'         — window.open (uses node.path as href)
-     *   default          — router.navigate with meta.routerLink or node.path
+     *   'action.logout'  -- dispatch Logout
+     *   '_blank'         -- window.open (uses node.path as href)
+     *   default          -- router.navigate with meta.routerLink or node.path
      */
     handleClick(node: NaviGraphNode): void {
         const target = node.meta.target;
@@ -88,7 +88,7 @@ export class NaviGraphService {
 
     /**
      * Standalone `showWhen` evaluator for callers that don't have a
-     * full `NaviGraphNode` (e.g. a grid's row context menu — a
+     * full `NaviGraphNode` (e.g. a grid's row context menu -- a
      * `rowAction.showWhen` predicate is evaluated against the row's
      * own projection). `null`/`undefined` predicates default to
      * visible, mirroring `isVisible`'s "no rule = always shown"
@@ -122,7 +122,7 @@ export class NaviGraphService {
             case 'ne':  return val !== cond['value'];
             case 'in':  return Array.isArray(cond['value']) && (cond['value'] as unknown[]).includes(val);
             case 'nin': return Array.isArray(cond['value']) && !(cond['value'] as unknown[]).includes(val);
-            // Prefix match for strings — primary use case is filtering
+            // Prefix match for strings -- primary use case is filtering
             // actions by MIME-type major (e.g., "image/" matches all
             // image MIMEs without enumerating each subtype).
             case 'startsWith':

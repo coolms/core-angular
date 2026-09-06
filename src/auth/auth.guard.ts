@@ -10,7 +10,7 @@ import { AppInitService } from '../bootstrap/app-init.service';
  *
  * The guard is intentionally ASYNC: it waits for AppInitService.ready$ before
  * evaluating auth state.  Without this, Angular's router can evaluate
- * isAuthenticated while APP_INITIALIZER is still in-flight — RestoreSession
+ * isAuthenticated while APP_INITIALIZER is still in-flight -- RestoreSession
  * will have placed a non-null (but expired) token in state, causing the guard
  * to pass even though the subsequent config/refresh requests will fail and
  * dispatch Logout.  Waiting for ready$ guarantees the auth state is settled.

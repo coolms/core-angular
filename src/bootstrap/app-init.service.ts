@@ -26,11 +26,11 @@ export class AppInitService {
     private readonly crossTabSync       = inject(CrossTabAuthSyncService);
     private readonly refreshCoordinator = inject(AuthRefreshCoordinator);
 
-    /** The only hardcoded URL — everything else comes from the manifest. */
+    /** The only hardcoded URL -- everything else comes from the manifest. */
     private readonly configUrl = '/api/v1/theme/config';
 
     /**
-     * Emits (once) when load() has fully completed — tokens settled, manifest
+     * Emits (once) when load() has fully completed -- tokens settled, manifest
      * set (or swallowed on error).  authGuard subscribes to this so it never
      * evaluates isAuthenticated against a partially-restored stale token.
      */
@@ -50,21 +50,21 @@ export class AppInitService {
         //
         // RestoreSession is synchronous (ctx.setState from localStorage), so
         // this await resolves in the same microtask.  Tokens are in NGXS state
-        // before ANY subsequent HTTP request fires — the auth interceptor reads
+        // before ANY subsequent HTTP request fires -- the auth interceptor reads
         // the token from state when attaching Authorization headers, so this
         // ordering prevents unauthenticated requests on page reload (F5).
         await firstValueFrom(this.store.dispatch(new RestoreSession()));
 
         // -- Step 2: fetch the manifest ----------------------------------------
         //
-        // BYPASS_AUTH is required here — not optional.  The manifest endpoint
+        // BYPASS_AUTH is required here -- not optional.  The manifest endpoint
         // is public, but two specific failure modes make bypassing necessary:
         //
         //   a) The stored access token may be expired.  Without BYPASS_AUTH the
         //      interceptor attaches the expired token, gets a 401, and tries to
         //      refresh.  But the refresh endpoint URL comes from the manifest
         //      (api.refresh() reads manifest.auth.refresh), which hasn't been
-        //      loaded yet — triggering a null-dereference crash before the app
+        //      loaded yet -- triggering a null-dereference crash before the app
         //      can recover.
         //
         //   b) Even if the token is valid, attaching it to a public endpoint
@@ -88,7 +88,7 @@ export class AppInitService {
         // -- Step 3: validate the restored session -----------------------------
         //
         // RestoreSession trusts whatever tokens are in localStorage, but they may
-        // have been revoked out-of-band — most notably, signing out on the public
+        // have been revoked out-of-band -- most notably, signing out on the public
         // SSR site revokes the user's WHOLE token set. We MUST settle the real
         // auth state here, BEFORE step 4 signals ready$: both the auth interceptor
         // AND authGuard gate on ready$, so if we signalled first, the guard would
@@ -121,7 +121,7 @@ export class AppInitService {
         // win over the saved route. The router cannot tell us which one this is:
         // withEnabledBlockingInitialNavigation holds the initial navigation until
         // this initializer resolves, so router.url is still '/'. The browser
-        // location is the only record of what was requested — Location.path()
+        // location is the only record of what was requested -- Location.path()
         // reads it with the /admin base href stripped, so the bare root (with or
         // without trailing slash) yields ''. Anything else, including a root URL
         // carrying query params, is treated as an explicit destination.
@@ -166,7 +166,7 @@ export class AppInitService {
             // 401 -> coordinator already dispatched Logout; transient -> session kept.
             return;
         }
-        // Refresh resolved — but the coordinator's fresh-state optimisation can hand
+        // Refresh resolved -- but the coordinator's fresh-state optimisation can hand
         // back the SAME access token (without a network round-trip) when its stored
         // expiry still looks fresh. For a token that was revoked but not yet expired
         // (signing out on the SSR site while the access token is still in its TTL),

@@ -39,7 +39,7 @@ export interface LayoutHeaderAction {
     disabled?: boolean;
     /**
      * Optional capability gate evaluated FE-side against runtime state
-     * (e.g. `administer` / `delete`) — the config declares WHICH actions
+     * (e.g. `administer` / `delete`) -- the config declares WHICH actions
      * exist + their gate; the FE decides if THIS user/row qualifies. Absent
      * = always shown. Used by detail pages whose actions are config-driven
      * (see `web:section-detail`).
@@ -54,11 +54,11 @@ export interface LayoutHeaderAction {
      * evaluator as a NaviGraph toolbar node, applied
      * by {@link LayoutActionsService}:
      *
-     *   showWhen     — the action does not APPLY, so it is absent.
-     *   disabledWhen — temporarily UNAVAILABLE: stays put and greys out.
-     *   busyWhen     — the action is RUNNING: greys out too, and may relabel.
-     *   busyLabel    — label shown while `busyWhen` holds ("Saving…").
-     *   activeWhen   — pressed/active styling.
+     *   showWhen     -- the action does not APPLY, so it is absent.
+     *   disabledWhen -- temporarily UNAVAILABLE: stays put and greys out.
+     *   busyWhen     -- the action is RUNNING: greys out too, and may relabel.
+     *   busyLabel    -- label shown while `busyWhen` holds ("Saving...").
+     *   activeWhen   -- pressed/active styling.
      *
      * Two carriers (a layout config and a NaviGraph tree) but ONE vocabulary:
      * a page that moves between them should not have to relearn how to say
@@ -97,7 +97,7 @@ export interface LayoutConfig {
     headerActions?: LayoutHeaderAction[];
     /**
      * Actions rendered in the page's fixed bottom bar (`<cms-detail-footer>`)
-     * — primary / destructive actions kept out of the cramped header.
+     * -- primary / destructive actions kept out of the cramped header.
      * Same shape as `headerActions`; gated per-item via `requires`.
      */
     footerActions?: LayoutHeaderAction[];

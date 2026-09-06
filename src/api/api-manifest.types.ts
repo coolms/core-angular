@@ -115,6 +115,23 @@ export interface DocumentApiManifest {
      */
     readonly spacesAvailableUrl?: string;  // GET  /api/v1/document/spaces/available
     readonly spaceEnablementUrl?: string;  // POST /api/v1/document/spaces/enablement
+
+    /**
+     * FQCN of the entity a filter-mode audience can be built from.
+     *
+     * ⚠️ The SERVER owns this and the client must not know it. The generation
+     * wizard offers Filter mode only when a template's context schema
+     * references this type, and it used to compare against a constant compiled
+     * into this bundle — which shipped the consuming application's class name
+     * inside a published package, and tied that package to an installation
+     * having that exact class.
+     *
+     * ⚠️ Absent arrives as `''`, like the urls above. Treat empty as **filter
+     * mode unavailable**, never as a reason to fall back to a remembered
+     * value: the server is the thing that rejects every other type, so a guess
+     * here offers a mode the server will refuse.
+     */
+    readonly filterAudienceEntity?: string;
 }
 
 export interface DynamicEntityApiManifest {

@@ -102,9 +102,16 @@ export interface DocumentApiManifest {
      *
      * ⚠️ ABSENT ARRIVES AS `''`, NOT `undefined`. The producer declares these
      * as non-nullable strings defaulting to empty, so an installation that has
-     * not set them sends an empty string and the `?` here never fires. Guard on
-     * falsiness — `!url`, `Boolean(url)` — and never on `?? fallback` or
-     * `=== undefined`, which read as present and hand a caller a request to ''.
+     * not set them sends an empty string and the `?` here never fires.
+     *
+     * Guard on FALSINESS — `!url`, `Boolean(url)`. The dangerous rewrite is
+     * `url === undefined` (or `!== undefined`), which reads as more precise and
+     * treats `''` as present, handing a caller a request to the empty string.
+     *
+     * ⚠️ A `?? fallback` is NOT the hazard, though it looks like the obvious
+     * one: `'' ?? x` is `''`, so a fallback never fires on the value this
+     * producer actually sends. Measured by mutation — adding one changed
+     * nothing, changing the guard broke three assertions.
      */
     readonly spacesAvailableUrl?: string;  // GET  /api/v1/document/spaces/available
     readonly spaceEnablementUrl?: string;  // POST /api/v1/document/spaces/enablement

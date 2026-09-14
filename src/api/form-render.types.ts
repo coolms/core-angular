@@ -1,4 +1,4 @@
-// Typed contract — mirrors FormRenderDefinition PHP VOs exactly.
+// Typed contract -- mirrors FormRenderDefinition PHP VOs exactly.
 // No `any` anywhere.
 
 export type FieldType =
@@ -6,7 +6,7 @@ export type FieldType =
     | 'select' | 'toggle' | 'date' | 'time' | 'hidden'
     | 'relation' | 'subform' | 'token-pattern' | 'richtext'
     | 'localizedText' | 'localizedTextarea' | 'optionsEditor'
-    // Phone module: composite international phone field — country select
+    // Phone module: composite international phone field -- country select
     // (localized via Intl.DisplayNames + dial codes from /api/v1/phone/countries)
     // + masked number input, composing a single E.164 string value.
     | 'intlPhone'
@@ -112,7 +112,7 @@ export interface LayoutNode {
 export type FormActionType    = 'submit' | 'button' | 'reset';
 export type FormActionVariant = 'primary' | 'secondary' | 'danger' | 'link';
 
-/** Terminal form button (Submit / Cancel / …) — mirrors PHP FormAction.
+/** Terminal form button (Submit / Cancel / ...) -- mirrors PHP FormAction.
  *  Resolved by the backend (declared `formOptions.actions`, else lifted from
  *  legacy submit fields, else a default Submit). `label` is already translated. */
 export interface FormAction {

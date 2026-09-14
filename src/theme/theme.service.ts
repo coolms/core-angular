@@ -9,7 +9,7 @@ import { AppConfigState } from '../state/app-config.state';
 /** What the user PICKED. `system` defers to the OS. */
 export type ThemeChoice = 'light' | 'dark' | 'system';
 
-/** What that resolves to right now — the only two the stylesheet knows. */
+/** What that resolves to right now -- the only two the stylesheet knows. */
 export type ResolvedTheme = 'light' | 'dark';
 
 const CHOICES: readonly ThemeChoice[] = ['light', 'dark', 'system'];
@@ -21,7 +21,7 @@ const CHOICES: readonly ThemeChoice[] = ['light', 'dark', 'system'];
  * the Profile -> Preferences tab already writes. This copy exists only so the
  * first paint of a reload is the right colour: the settings request is async,
  * so without it every load would start light and flip. It is deliberately NOT
- * stored via UserPreferencesService, which syncs its own bag to the server —
+ * stored via UserPreferencesService, which syncs its own bag to the server --
  * that would give one setting two server-side homes.
  */
 const CACHE_KEY = 'coolms_theme';
@@ -30,7 +30,7 @@ const ACCENT_CACHE_KEY = 'coolms_accent';
 /**
  * Six-digit hex only, checked again HERE even though the server already vets it
  * on write. This value is substituted into a `--cms-*` custom property,
- * and a stored setting is data from the network like any other — the write-side
+ * and a stored setting is data from the network like any other -- the write-side
  * guard protects what the admin stores, this one protects what it renders.
  */
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -48,7 +48,7 @@ function isAccent(v: unknown): v is string {
  *
  * The stylesheet does the rest: `:root[data-theme='dark']` re-points the
  * `--cms-*` palette and every colour in the admin arrives through those names.
- * Nothing here knows a single colour, which is the point — a second
+ * Nothing here knows a single colour, which is the point -- a second
  * theme is a block of tokens, not a code change.
  *
  * Follows the shape of UserCalendarPreferencesService and
@@ -79,7 +79,7 @@ export class ThemeService {
 
     /**
      * The colour actually painted: personal override, else the deployment's,
-     * else null — which leaves the stylesheet's own accent in place.
+     * else null -- which leaves the stylesheet's own accent in place.
      *
      * Three rungs and each is a real state. A user who has chosen nothing is
      * NOT the same as one who chose the deployment's colour: clear the
@@ -114,21 +114,21 @@ export class ThemeService {
 
     /**
      * One-shot load of the stored preference. Safe to call more than once and
-     * safe for anonymous users — a failure leaves the cached/system value in
+     * safe for anonymous users -- a failure leaves the cached/system value in
      * place rather than forcing light, so the login screen still matches the OS.
      */
     ensureLoaded(): Observable<ThemeChoice> {
         if (this.loadOnce$) return this.loadOnce$;
 
         // Read the deployment's colour FIRST and synchronously, so it is in
-        // place whether or not the settings request succeeds — an anonymous
+        // place whether or not the settings request succeeds -- an anonymous
         // visitor on the login screen still sees the deployment's brand.
         this.readPlatformAccent();
 
         this.loadOnce$ = this.api.getSettings().pipe(
             map(all => {
                 const prefs = all['preferences'] as Record<string, unknown> | undefined;
-                // The accent rides along on the same response — it is a field of
+                // The accent rides along on the same response -- it is a field of
                 // the same section, so it costs no extra request.
                 this.setAccent(isAccent(prefs?.['accentColor']) ? prefs['accentColor'] : null);
 
@@ -144,7 +144,7 @@ export class ThemeService {
 
     /**
      * Called by the Profile page after the Preferences tab saves, so the admin
-     * re-themes on the spot. Ignores anything that is not a known choice —
+     * re-themes on the spot. Ignores anything that is not a known choice --
      * the section PATCH returns the whole merged bag, not just this field.
      */
     update(value: unknown): void {
@@ -167,14 +167,14 @@ export class ThemeService {
             localStorage.setItem(CACHE_KEY, choice);
         } catch {
             // A blocked or full localStorage costs the pre-paint hint, nothing
-            // more — the server value still arrives and applies.
+            // more -- the server value still arrives and applies.
         }
     }
 
     /**
      * The manifest is loaded at bootstrap, well before the authenticated shell
      * calls this, so a snapshot read is enough and no subscription is needed.
-     * A malformed value is ignored rather than applied — the container refuses
+     * A malformed value is ignored rather than applied -- the container refuses
      * to build with one, but the manifest crosses the network all the same.
      */
     private readPlatformAccent(): void {
@@ -194,7 +194,7 @@ export class ThemeService {
 
     /**
      * Writes the override onto the document element, where an inline style
-     * outranks every stylesheet rule — including the dark block — so one
+     * outranks every stylesheet rule -- including the dark block -- so one
      * declaration re-points the accent in both themes.
      *
      * Only --cms-accent is set, not the -hover/-light/-text members of the

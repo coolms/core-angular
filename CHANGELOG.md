@@ -9,7 +9,19 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
-## 2.0.0-alpha.3 — 2026-09-03
+## Unreleased
+
+### Added
+
+**`DocumentApiManifest` gained `spacesAvailableUrl` and `spaceEnablementUrl`.**
+Optional, mirroring the backend manifest DTO. They let the Documents space
+accordion offer an *Add space* control instead of only ever losing entries when
+a site is not enabled for documents.
+
+Both optional, so a client built against an older backend simply hides the
+control rather than showing one that cannot work.
+
+## 2.0.0-alpha.3 -- 2026-09-03
 
 **A pre-release, carrying no compatibility promise.** Published under the
 `alpha` dist-tag.
@@ -19,7 +31,7 @@ refresh with a single-flight coordinator, the boot manifest and application
 config state, theme and user preferences, the error handler, the HTTP
 interceptors, and the wire types the CoolMS API emits.
 
-It is the bottom of the layer graph — it has no `@coolms` peers of its own, and
+It is the bottom of the layer graph -- it has no `@coolms` peers of its own, and
 no runtime dependencies at all. Angular, NGXS and RxJS are peers.
 
 ### Fixed

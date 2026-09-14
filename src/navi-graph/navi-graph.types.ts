@@ -3,9 +3,9 @@
 
 /**
  * Well-known click target values embedded in meta.target.
- *   'action.logout' — dispatch Logout action
- *   'route'         — navigate via routerLink (default when target absent)
- *   '_blank'        — open in a new tab (hrefOverride must be set)
+ *   'action.logout' -- dispatch Logout action
+ *   'route'         -- navigate via routerLink (default when target absent)
+ *   '_blank'        -- open in a new tab (hrefOverride must be set)
  */
 // `& {}` rather than a bare `| string`, which absorbs the three literals and
 // leaves the type meaning "any string" -- the docblock above would then be

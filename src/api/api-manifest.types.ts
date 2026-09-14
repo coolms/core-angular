@@ -1,4 +1,4 @@
-// Typed contract — must mirror ApiManifest PHP VOs exactly.
+// Typed contract -- must mirror ApiManifest PHP VOs exactly.
 // No `any` anywhere.
 
 export interface AuthApiManifest {
@@ -52,7 +52,7 @@ export interface ContentApiManifest {
     //
     // The five `articleXxxUrl` fields that stood here are GONE with the
     // endpoints they named. Placement destinations now
-    // come from `/content/pages/surfaces` — still never hardcoded on the
+    // come from `/content/pages/surfaces` -- still never hardcoded on the
     // client, because a surface is configuration, not a product concept.
     readonly pageSpacesUrl?: string;     // /api/v1/content/pages/spaces
     readonly pageTypesUrl?: string;      // /api/v1/content/page-types
@@ -92,6 +92,46 @@ export interface VfsApiManifest {
  */
 export interface DocumentApiManifest {
     readonly spacesUrl?: string;  // GET /api/v1/document/spaces
+
+    /**
+     * !! Carried here rather than derived from `spacesUrl`. Concatenating
+     * `/available` onto that would couple the client to a URL shape the router
+     * owns, and it would keep working until the route moved -- then fail as a
+     * 404 the UI reports as "no sites available", which is indistinguishable
+     * from the true empty answer.
+     *
+     * !! ABSENT ARRIVES AS `''`, NOT `undefined`. The producer declares these
+     * as non-nullable strings defaulting to empty, so an installation that has
+     * not set them sends an empty string and the `?` here never fires.
+     *
+     * Guard on FALSINESS -- `!url`, `Boolean(url)`. The dangerous rewrite is
+     * `url === undefined` (or `!== undefined`), which reads as more precise and
+     * treats `''` as present, handing a caller a request to the empty string.
+     *
+     * !! A `?? fallback` is NOT the hazard, though it looks like the obvious
+     * one: `'' ?? x` is `''`, so a fallback never fires on the value this
+     * producer actually sends. Measured by mutation -- adding one changed
+     * nothing, changing the guard broke three assertions.
+     */
+    readonly spacesAvailableUrl?: string;  // GET  /api/v1/document/spaces/available
+    readonly spaceEnablementUrl?: string;  // POST /api/v1/document/spaces/enablement
+
+    /**
+     * FQCN of the entity a filter-mode audience can be built from.
+     *
+     * !! The SERVER owns this and the client must not know it. The generation
+     * wizard offers Filter mode only when a template's context schema
+     * references this type, and it used to compare against a constant compiled
+     * into this bundle -- which shipped the consuming application's class name
+     * inside a published package, and tied that package to an installation
+     * having that exact class.
+     *
+     * !! Absent arrives as `''`, like the urls above. Treat empty as **filter
+     * mode unavailable**, never as a reason to fall back to a remembered
+     * value: the server is the thing that rejects every other type, so a guess
+     * here offers a mode the server will refuse.
+     */
+    readonly filterAudienceEntity?: string;
 }
 
 export interface DynamicEntityApiManifest {
@@ -132,6 +172,7 @@ export interface IdentityApiManifest {
     readonly settingsSectionUrl:  string;  // PATCH /auth/me/settings/{section} pattern
     readonly colorUrl:            string;  // PATCH /auth/me/color
     readonly rolesUrl?:           string;  // GET /api/v1/identity/roles
+    readonly elevationUrl?:       string;  // GET / POST / DELETE /api/v1/auth/elevation
 }
 
 /**
@@ -176,7 +217,7 @@ export interface EditorApiManifest {
  * Viewer manifest emitted by the backend's Document module.
  * Each viewer declares the MIME types / extensions it handles, the
  * Angular component selector to dispatch into, and one config blob per
- * profile. Profile config is open-ended — every viewer interprets the
+ * profile. Profile config is open-ended -- every viewer interprets the
  * keys it understands and ignores the rest.
  */
 export interface ViewerProfileApiManifest {

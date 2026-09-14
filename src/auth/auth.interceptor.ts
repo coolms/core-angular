@@ -28,14 +28,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const initService = inject(AppInitService);
 
     // Caller explicitly requested no auth header (e.g. the bootstrap config
-    // fetch — the endpoint is public and a stale token would cause 401).
+    // fetch -- the endpoint is public and a stale token would cause 401).
     if (req.context.get(BYPASS_AUTH)) {
         return next(req);
     }
 
     // Auth endpoints are public by design.  The backend's JWT firewall rejects any
-    // request that carries an invalid/expired Bearer token — even on endpoints
-    // that would otherwise allow anonymous access — so never forward a stored
+    // request that carries an invalid/expired Bearer token -- even on endpoints
+    // that would otherwise allow anonymous access -- so never forward a stored
     // token to login or refresh.
     if (req.url.includes('/auth/login') || req.url.includes('/auth/refresh')) {
         return next(req);
@@ -65,7 +65,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                         return throwError(() => err);
                     }
 
-                    // Avoid infinite loop — skip refresh for auth endpoints themselves.
+                    // Avoid infinite loop -- skip refresh for auth endpoints themselves.
                     if (req.url.includes('/auth/refresh') || req.url.includes('/auth/login')) {
                         return throwError(() => err);
                     }

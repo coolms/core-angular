@@ -8,7 +8,7 @@ import { ThemeService } from './theme.service';
 /**
  * The service's whole job is that `data-theme` on <html> ends up matching the
  * user's stored preference, so every assertion here reads the ATTRIBUTE rather
- * than the signal — a service that tracked the choice perfectly and never
+ * than the signal -- a service that tracked the choice perfectly and never
  * touched the document would be useless and would still pass a signal-only test.
  */
 describe('ThemeService', () => {
@@ -69,7 +69,7 @@ describe('ThemeService', () => {
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
-        // An explicit choice must beat the OS — that is what "light" MEANS,
+        // An explicit choice must beat the OS -- that is what "light" MEANS,
         // as opposed to "system".
         expect(svc.resolved()).toBe('light');
         expect(attr()).toBe('light');
@@ -215,7 +215,7 @@ describe('ThemeService', () => {
         TestBed.flushEffects();
 
         // Clearing a personal colour must reveal the deployment's, not the
-        // stylesheet's — the three rungs collapse in order.
+        // stylesheet's -- the three rungs collapse in order.
         expect(document.documentElement.style.getPropertyValue('--cms-accent')).toBe('#0a7d2b');
     });
 

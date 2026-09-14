@@ -35,7 +35,7 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
     beforeEach(() => {
         TestBed.configureTestingModule({
             providers: [
-                // Stub the injected deps — isVisible is pure, doesn't touch them.
+                // Stub the injected deps -- isVisible is pure, doesn't touch them.
                 { provide: HttpClient, useValue: {} },
                 { provide: Router, useValue: {} },
                 { provide: Store, useValue: { dispatch: () => ({ subscribe: () => undefined }) } },

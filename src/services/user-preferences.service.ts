@@ -7,7 +7,7 @@ import { AppConfigState } from '../state/app-config.state';
 import { type DataGridPreference } from './user-preferences.types';
 
 /**
- * Unified user preferences service — all preference types share one
+ * Unified user preferences service -- all preference types share one
  * localStorage key (`coolms_ui_prefs`) and one debounced server-sync pipeline.
  *
  * Key naming convention (stored as nested objects, referenced via dot-notation):
@@ -43,7 +43,7 @@ export class UserPreferencesService {
     private syncSubject = new Subject<Record<string, unknown>>();
 
     constructor() {
-        // Debounced sync to server — batches rapid changes (e.g. live resize)
+        // Debounced sync to server -- batches rapid changes (e.g. live resize)
         this.syncSubject.pipe(
             debounceTime(this.SYNC_DELAY),
             takeUntilDestroyed(this.destroyRef),
@@ -164,10 +164,10 @@ export class UserPreferencesService {
         try {
             const raw = localStorage.getItem(this.STORAGE_KEY);
             if (!raw) {
-                // Fresh device — trust the server entirely
+                // Fresh device -- trust the server entirely
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(uiPrefs));
             } else {
-                // Local prefs exist — server is the base, local namespaces win
+                // Local prefs exist -- server is the base, local namespaces win
                 const local  = JSON.parse(raw) as Record<string, unknown>;
                 const merged = { ...uiPrefs, ...local };
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
@@ -331,7 +331,7 @@ export class UserPreferencesService {
         this.save(all);
     }
 
-    // -- Media (legacy pass-through — kept for compatibility) -----------------
+    // -- Media (legacy pass-through -- kept for compatibility) -----------------
 
     /** @deprecated Use getPageState('media') instead */
     getMediaViewMode(): string | null {

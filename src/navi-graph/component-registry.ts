@@ -6,10 +6,10 @@ import { Injectable, type Type } from '@angular/core';
  * Backed by a static Map so components registered at module load time
  * (e.g. in app.config.ts) are visible to all injected instances.
  *
- * Usage — static (app.config.ts / bootstrap time):
+ * Usage -- static (app.config.ts / bootstrap time):
  *   ComponentRegistry.register('MediaLibraryPage', MediaLibraryPage);
  *
- * Usage — injected (SlotComponent / runtime):
+ * Usage -- injected (SlotComponent / runtime):
  *   private readonly registry = inject(ComponentRegistry);
  *   const cls = this.registry.get('MediaLibraryPage');
  */

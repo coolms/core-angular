@@ -9,7 +9,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * A spinner says "something is happening" and nothing else; every product has
  * one and none of them are yours. The bang is already the one glyph in the
  * wordmark that carries the brand, so a loader built from it says whose
- * software is thinking — for free, in the place a user is already looking.
+ * software is thinking -- for free, in the place a user is already looking.
  *
  * ## Why one component rather than a snippet per surface
  *
@@ -20,7 +20,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  *
  * ## The animation
  *
- * The stem wipes upward and the dot lands after it, on a loop — the shape being
+ * The stem wipes upward and the dot lands after it, on a loop -- the shape being
  * WRITTEN rather than spun. It is deliberately calm: a loader is background
  * furniture, and anything with a hard beat gets irritating on the third viewing.
  * Under `prefers-reduced-motion` it holds still and only breathes, because
@@ -149,7 +149,7 @@ export class CmsLoaderComponent {
 
     /**
      * A clip-path needs a document-unique id, and this component is used more
-     * than once per page — two loaders sharing an id makes the second one clip
+     * than once per page -- two loaders sharing an id makes the second one clip
      * against the first one's rectangle and stop animating.
      */
     protected readonly clipId = 'cms-loader-' + Math.random().toString(36).slice(2, 9);

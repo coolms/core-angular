@@ -20,6 +20,17 @@ import type { ElevationChange, ElevationState } from './elevation.types';
  *      that follows it.
  *   4. Another tab's write to the storage key makes this tab ask the server.
  *   5. Without the manifest URL the service is inert: no requests, no throw.
+ *   6. A state read past `expiresAt` reports expired WITHOUT a request, and
+ *      announces it once. This is the one that had never run in production:
+ *      the only grant this installation has ever made was dropped at 2m58s of
+ *      a 15-minute lifetime, so expiry had never fired, and a mechanism that
+ *      has never executed is unknown rather than probably working.
+ *   7. A tab coming back into view re-asks, once for the pair of events.
+ *
+ * Specs 6 and 7 deliberately do NOT use `fakeAsync`: with real timers, nothing
+ * scheduled can fire inside a synchronous spec, so anything they observe was
+ * done by the read rather than by the timer. The clock is moved instead of
+ * waited on.
  */
 describe('ElevationService', () => {
     let service: ElevationService;
@@ -130,5 +141,92 @@ describe('ElevationService', () => {
         expect(state!.elevated).toBe(false);
         expect(service.isGated('/api/v1/vfs/nodes')).toBe(true);
         expect(service.isGated('/api/v1/content/pages')).toBe(false);
+    });
+
+    /**
+     * Seed a live grant of `seconds` and hand back the moment it ends. Uses a
+     * real POST so the state arrives the way the server gives it.
+     */
+    const granted = (seconds: number): number => {
+        const endsAt = Date.now() + seconds * 1_000;
+        service.elevate('secret').subscribe();
+        httpMock.expectOne(ELEVATION).flush({
+            ...base, elevated: true, expiresAt: new Date(endsAt).toISOString(),
+        });
+        return endsAt;
+    };
+
+    /** Move the clock rather than wait for it. */
+    const clockTo = (at: number): void => {
+        spyOn(Date, 'now').and.returnValue(at);
+    };
+
+    it('reports expired on a read once expiresAt has gone by, and asks nothing to find out', () => {
+        setup();
+        const endsAt = granted(900);
+        expect(service.elevated()).toBe(true);
+
+        // One second past the moment the server named. No timer has run --
+        // this spec has real timers and never yields -- and no request is made.
+        clockTo(endsAt + 1_000);
+
+        expect(service.elevated()).toBe(false);
+        expect(service.expiresAt()).toBeNull();
+        expect(service.state()!.ended).toEqual({ reason: 'expired', at: new Date(endsAt).toISOString() });
+        httpMock.expectNone(ELEVATION);
+    });
+
+    it('does not expire an answer whose expiresAt it cannot read', () => {
+        setup();
+        service.elevate('secret').subscribe();
+        httpMock.expectOne(ELEVATION).flush({ ...base, elevated: true, expiresAt: 'not a date' });
+
+        // Garbage is a reason to keep asking the server, not to end an
+        // elevation it may still be granting.
+        expect(service.elevated()).toBe(true);
+    });
+
+    it('announces the expiry once, however many times it is read', async () => {
+        setup();
+        const endsAt = granted(900);
+        clockTo(endsAt + 1_000);
+
+        service.elevated();
+        service.state();
+        service.expiresAt();
+        await Promise.resolve();
+
+        expect(changes.map(c => c.kind)).toEqual(['granted', 'expired']);
+        expect(changes[1].state.ended.reason).toBe('expired');
+        httpMock.expectNone(ELEVATION);
+    });
+
+    it('re-asks when the tab comes back, once for the pair of events', () => {
+        setup();
+        service.refresh().subscribe();
+        httpMock.expectOne(ELEVATION).flush(base);
+
+        // visibilitychange and focus both fire on a single alt-tab.
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.dispatchEvent(new Event('focus'));
+        httpMock.expectOne(ELEVATION).flush(base);
+        httpMock.expectNone(ELEVATION);
+
+        // ...and a return later than the coalescing window does ask again.
+        clockTo(Date.now() + 10_000);
+        window.dispatchEvent(new Event('focus'));
+        httpMock.expectOne(ELEVATION).flush(base);
+    });
+
+    it('ends an elapsed grant on the way back even when the server cannot be reached', () => {
+        setup();
+        const endsAt = granted(900);
+        clockTo(endsAt + 1_000);
+
+        window.dispatchEvent(new Event('focus'));
+        httpMock.expectOne(ELEVATION).error(new ProgressEvent('offline'));
+
+        // The read had already decided; the failed request changes nothing.
+        expect(service.elevated()).toBe(false);
     });
 });

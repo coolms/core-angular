@@ -6,7 +6,7 @@ import type { ElevationState } from './elevation.types';
  * What the elevation prompt is told when it opens.
  *
  * `state` is the server's answer at the moment of asking -- `ended.reason` is
- * rendered first (ADR-184 s.8: a person asked for a password again after F5
+ * rendered first (a person asked for a password again after F5
  * with no explanation reads it as a fault), `warnings` may say the
  * installation cannot elevate yet, `mfaRequired` decides whether a code field
  * shows from the start.

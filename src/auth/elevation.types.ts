@@ -1,5 +1,5 @@
 /**
- * The elevation state of the signed-in session (ADR-184): the wire shape of
+ * The elevation state of the signed-in session: the wire shape of
  * `GET /auth/elevation`, returned again by `POST` on a grant.
  *
  * Elevation is state, not a role. It lasts a fixed time from the grant, ends
@@ -31,7 +31,7 @@ export interface ElevationState {
 
 /**
  * `closed` is the beacon (the panel was closed or reloaded), `dropped_by_user`
- * the explicit drop, `refresh_from_other_pair` the tripwire of ADR-184 s.6,
+ * the explicit drop, `refresh_from_other_pair` the server's refresh tripwire,
  * `never` a session that has not elevated yet.
  */
 export type ElevationEndedReason =

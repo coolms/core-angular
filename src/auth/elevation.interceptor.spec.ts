@@ -11,7 +11,7 @@ import { ELEVATION_PROMPT, type ElevationPromptRequest } from './elevation-promp
 import type { ElevationState } from './elevation.types';
 
 /**
- * ADR-184, the client requirement, point 1: the prompt hangs off the 403.
+ * The elevation client requirement, point 1: the prompt hangs off the 403.
  *
  * Coverage:
  *   1. A 403 on a gated URL asks the state endpoint; unelevated -> the prompt

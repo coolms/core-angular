@@ -172,7 +172,7 @@ export interface IdentityApiManifest {
     readonly settingsSectionUrl:  string;  // PATCH /auth/me/settings/{section} pattern
     readonly colorUrl:            string;  // PATCH /auth/me/color
     readonly rolesUrl?:           string;  // GET /api/v1/identity/roles
-    readonly elevationUrl?:       string;  // GET / POST / DELETE /api/v1/auth/elevation (ADR-184)
+    readonly elevationUrl?:       string;  // GET / POST / DELETE /api/v1/auth/elevation
 }
 
 /**

@@ -6,7 +6,7 @@ import { ErrorHandlerService } from '../errors/error-handler.service';
 
 /**
  * The elevation prompt hangs off the 403, not off the listing's flags
- * (ADR-184, the client requirement, point 1).
+ * (the elevation client requirement, point 1).
  *
  * Eight VFS actions -- rename, delete, move, copy, chmod, chown, upload, new --
  * carry no capability flag: they are offered unconditionally and refused by the

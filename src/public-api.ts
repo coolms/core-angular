@@ -41,7 +41,7 @@ export * from './auth/login-page.guard';
 export * from './auth/auth.interceptor';
 export * from './auth/auth-refresh.coordinator';
 export * from './auth/cross-tab-auth-sync.service';
-// Elevation (ADR-184): the state, the port the prompt binds to, the service
+// Elevation as session state: the state, the port the prompt binds to, the service
 // that reads one source, and the interceptor that opens the prompt on a 403.
 export * from './auth/elevation.types';
 export * from './auth/elevation-prompt.port';

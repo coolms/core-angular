@@ -8,7 +8,7 @@ import { ELEVATION_PROMPT } from './elevation-prompt.port';
 import type { ElevationChange, ElevationState } from './elevation.types';
 
 /**
- * ADR-184, the client requirement, points 3 and 4: one source, and every
+ * The elevation client requirement, points 3 and 4: one source, and every
  * change of it announced.
  *
  * Coverage:

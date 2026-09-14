@@ -18,7 +18,7 @@ export const BYPASS_ELEVATION = new HttpContextToken<boolean>(() => false);
 /**
  * The `storage` key whose write announces "this session's elevation changed"
  * to the other tabs of the same browser. One token chain is shared across
- * tabs (ADR-184 s.5, s.7), so a grant or a drop in one tab is true in all of
+ * tabs, so a grant or a drop in one tab is true in all of
  * them; the others learn of it here rather than at their next 403.
  */
 const CROSS_TAB_KEY = 'coolms.elevation.changed';
@@ -26,7 +26,7 @@ const CROSS_TAB_KEY = 'coolms.elevation.changed';
 /**
  * The elevation state of this session, read from ONE place: the server.
  *
- * ADR-184's client requirement, in one service. The state endpoint is the only
+ * The elevation client requirement, in one service. The state endpoint is the only
  * source -- `elevated`, `expiresAt`, how the last elevation ended -- and every
  * change of it is announced on `changes$` so the Explorer listing can refetch
  * (its capability flags are the server's reading of the same state, computed

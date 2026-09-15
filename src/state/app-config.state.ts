@@ -35,7 +35,7 @@ export class AppConfigState {
     }
 
     /**
-     * F.7 viewer manifest. Null when the backend didn't ship a viewers
+     * The viewer manifest. Null when the backend didn't ship a viewers
      * section (no tagged providers); consumers should fall back to a
      * "no preview" surface.
      */

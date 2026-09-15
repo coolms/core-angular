@@ -11,12 +11,24 @@ predate this file would be a worse record than not having them.
 
 ## Unreleased
 
+### Changed
+
+- `ElevationService`: an elevation whose `expiresAt` is already past is
+  reported as expired **when its state is read** -- `state()` and
+  `elevated()` are plain accessors that compare against the clock and demote
+  the stored state on the spot -- rather than when a timer fires. A timer only
+  reschedules the announcement; the read does the work, which is what a
+  suspended tab, a moved clock or a missed tick could never defeat. The
+  service also reconciles on `visibilitychange` and `focus`, coalesced to one
+  refresh per two seconds.
+
 ### Added
 
 - Declares `bugs` so a page imported from this package, and the catalogue,
   know where a correction is filed. The registry filled the gap from GitHub when
   the manifest was silent; the declared field is the one that holds on any
   registry.
+
 **`DocumentApiManifest` gained `spacesAvailableUrl` and `spaceEnablementUrl`.**
 Optional, mirroring the backend manifest DTO. They let the Documents space
 accordion offer an *Add space* control instead of only ever losing entries when

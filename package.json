@@ -26,6 +26,9 @@
     "client",
     "runtime"
   ],
+  "bugs": {
+    "url": "https://github.com/coolms/core-angular/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/coolms/core-angular.git"

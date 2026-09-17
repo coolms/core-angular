@@ -20,7 +20,9 @@ import type { ElevationState } from './elevation.types';
  *   2. Declined -> the caller gets the ORIGINAL 403, and no retry is sent.
  *   3. Elevated already -> no prompt, the 403 is a real refusal.
  *   4. Not a 403 (404) -> untouched, no state read.
- *   5. Not a gated URL (/content/pages) -> untouched.
+ *   5. Not stamped (a 403 for another reason) -> untouched; stamped on a
+ *      non-VFS route (a media asset's permissions) -> the prompt; stamped
+ *      from another origin -> untouched.
  *   6. The elevation endpoint's own 403 (wrong password) is not a refused
  *      action: BYPASS_ELEVATION passes it through.
  *   7. A burst of refusals opens ONE prompt; every caller retries on the one
@@ -64,7 +66,13 @@ describe('elevationInterceptor', () => {
 
     afterEach(() => httpMock.verify());
 
-    const refuse = (url: string, detail = "Permission denied: cannot write '/docs/a.md'"): void => {
+    /** A 403 the server stamped: refused by the named gate for want of elevation. */
+    const refuse = (url: string, detail = "Permission denied: cannot write '/docs/a.md'", gate = 'vfs.permission'): void => {
+        httpMock.expectOne(url).flush({ detail }, { status: 403, statusText: 'Forbidden', headers: { 'X-Elevation-Required': gate } });
+    };
+
+    /** A 403 refused for another reason: no stamp. */
+    const refuseUnstamped = (url: string, detail = 'You may not read this.'): void => {
         httpMock.expectOne(url).flush({ detail }, { status: 403, statusText: 'Forbidden' });
     };
 
@@ -123,12 +131,38 @@ describe('elevationInterceptor', () => {
         expect((error as { status: number }).status).toBe(404);
     });
 
-    it('leaves a 403 outside the gated URLs alone', () => {
+    it('leaves a 403 without the stamp alone: refused for another reason', () => {
         setup();
         let error: unknown = null;
         http.get('/api/v1/content/pages').subscribe({ error: e => { error = e; } });
 
-        refuse('/api/v1/content/pages');
+        refuseUnstamped('/api/v1/content/pages');
+        httpMock.expectNone(ELEVATION);
+        expect(opened.length).toBe(0);
+        expect((error as { status: number }).status).toBe(403);
+    });
+
+    it('prompts on a stamped 403 from ANY route of this API, not only the VFS', () => {
+        setup();
+        let result: unknown = null;
+        http.patch('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions', { mode: '0644' }).subscribe(r => { result = r; });
+
+        refuse('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions', 'Permission denied: cannot chmod', 'vfs.chmod');
+        httpMock.expectOne(ELEVATION).flush(unelevated);
+        expect(opened.length).toBe(1);
+        expect(opened[0].refusal).toContain('chmod');
+
+        answer.next(true);
+        httpMock.expectOne('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions').flush({ ok: true });
+        expect(result).toEqual({ ok: true });
+    });
+
+    it('ignores a stamped 403 from another origin: only this API\'s word counts', () => {
+        setup();
+        let error: unknown = null;
+        http.get('https://elsewhere.example/api/v1/vfs/nodes').subscribe({ error: e => { error = e; } });
+
+        refuse('https://elsewhere.example/api/v1/vfs/nodes');
         httpMock.expectNone(ELEVATION);
         expect(opened.length).toBe(0);
         expect((error as { status: number }).status).toBe(403);

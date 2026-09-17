@@ -58,21 +58,14 @@ const RECONCILE_MIN_INTERVAL_MS = 2_000;
  * opens one dialog and every caller waits on the same answer.
  */
 /**
- * Whether `url` is the manifest pattern's URL, or that URL with one more
- * segment (a release names the hold after the holds pattern). A `{name}`
- * segment in the pattern stands for exactly one non-empty path segment; a
- * scheme and host on the URL are dropped; the query string is ignored.
+ * The header a 403 refused for want of elevation carries, with the gate's name
+ * as its value. The server stamps it where the gate refused; the interceptor
+ * prompts on it and on nothing else. There is no list of gated URLs on this
+ * side any more: the one that stood here lagged the server by every route
+ * whose refusal came from the VFS permission service under another module's
+ * path (media, document and word templates, content distribution).
  */
-export function patternMatches(pattern: string, url: string): boolean {
-    let path = url.split('?')[0];
-    if (/^https?:\/\//.test(path)) {
-        try { path = new URL(path).pathname; } catch { return false; }
-    }
-    const want = pattern.split('/');
-    const have = path.split('/');
-    if (have.length !== want.length && have.length !== want.length + 1) return false;
-    return want.every((segment, i) => /^\{[a-zA-Z]+\}$/.test(segment) ? have[i] !== '' : segment === have[i]);
-}
+export const ELEVATION_REQUIRED_HEADER = 'X-Elevation-Required';
 
 @Injectable({ providedIn: 'root' })
 export class ElevationService {
@@ -160,22 +153,25 @@ export class ElevationService {
     }
 
     /**
-     * Whether a URL is one the elevation gate stands in front of. The
-     * requirement names the VFS: every write-ish action under `{apiBase}/vfs/`
-     * is refused with 403 by the same decider that computed the listing's
-     * flags. The account-deletion acts -- cancelling a deletion as an
-     * administrator, placing and releasing a legal hold -- are gated the same
-     * way, and their URLs come from the manifest's per-account patterns
-     * (`{id}` stands for the account), so nothing here names a path. Other
-     * gated surfaces (the media listing scope, the terminal) are not matched
-     * until their refusals are specified the same way.
+     * Whether a URL belongs to THIS API: a relative one under the manifest's
+     * `apiBase`, or an absolute one on this origin under it. The interceptor
+     * acts on a stamped refusal from here and from nowhere else -- a third
+     * party answering 403 with a header of the same name is not an invitation
+     * to elevate this session.
      */
-    isGated(url: string): boolean {
-        const manifest = this.store.selectSnapshot(AppConfigState.manifest);
-        const apiBase = manifest?.apiBase ?? '/api/v1';
-        if (url.includes(`${apiBase}/vfs/`)) return true;
-        const patterns = [manifest?.identity?.userDeletionUrl, manifest?.identity?.userLegalHoldsUrl];
-        return patterns.some(pattern => !!pattern && patternMatches(pattern, url));
+    isThisApi(url: string): boolean {
+        const apiBase = this.store.selectSnapshot(AppConfigState.manifest)?.apiBase ?? '/api/v1';
+        let path = url.split('?')[0];
+        if (/^https?:\/\//.test(path)) {
+            try {
+                const parsed = new URL(path);
+                if (typeof window !== 'undefined' && parsed.host !== window.location.host) return false;
+                path = parsed.pathname;
+            } catch {
+                return false;
+            }
+        }
+        return path === apiBase || path.startsWith(`${apiBase}/`);
     }
 
     /** Ask the server. Applies the answer and announces it when it differs. */

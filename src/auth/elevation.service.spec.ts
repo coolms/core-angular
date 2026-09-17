@@ -139,30 +139,18 @@ describe('ElevationService', () => {
         service.refresh().subscribe(s => { state = s; });
         httpMock.expectNone(ELEVATION);
         expect(state!.elevated).toBe(false);
-        expect(service.isGated('/api/v1/vfs/nodes')).toBe(true);
-        expect(service.isGated('/api/v1/content/pages')).toBe(false);
+        expect(service.isThisApi('/api/v1/vfs/nodes')).toBe(true);
+        expect(service.isThisApi('/other/api/v1/nodes')).toBe(false);
     });
 
-    it('gates the deletion acts by the manifest patterns, and nothing else under /auth', () => {
-        setup({ apiBase: '/api/v1', identity: {
-            elevationUrl: ELEVATION,
-            userDeletionUrl: '/api/v1/auth/users/{id}/deletion',
-            userLegalHoldsUrl: '/api/v1/auth/users/{id}/legal-holds',
-        } });
-        const id = '01a0aff1-1a3e-7d26-a49b-80b1d6465a28';
-        expect(service.isGated(`/api/v1/auth/users/${id}/deletion`)).toBe(true);
-        expect(service.isGated(`/api/v1/auth/users/${id}/legal-holds`)).toBe(true);
-        expect(service.isGated(`/api/v1/auth/users/${id}/legal-holds/01a0aff1-b6d4-70dc-a2d2-bef6d166d100`)).toBe(true);
-        expect(service.isGated(`http://localhost:8080/api/v1/auth/users/${id}/deletion?x=1`)).toBe(true);
-        expect(service.isGated(`/api/v1/auth/users/${id}`)).toBe(false);
-        expect(service.isGated(`/api/v1/auth/users/${id}/groups`)).toBe(false);
-        expect(service.isGated('/api/v1/auth/deletions')).toBe(false);
-        expect(service.isGated('/api/v1/auth/me/deletion')).toBe(false);
-    });
-
-    it('gates no deletion act when the manifest names none', () => {
+    it('knows which URLs are this API: under apiBase, relative or on this origin', () => {
         setup({ apiBase: '/api/v1', identity: { elevationUrl: ELEVATION } });
-        expect(service.isGated('/api/v1/auth/users/x/deletion')).toBe(false);
+        expect(service.isThisApi('/api/v1/media/x/permissions?y=1')).toBe(true);
+        expect(service.isThisApi('/api/v1')).toBe(true);
+        expect(service.isThisApi(`${window.location.origin}/api/v1/vfs/nodes`)).toBe(true);
+        expect(service.isThisApi('https://elsewhere.example/api/v1/vfs/nodes')).toBe(false);
+        expect(service.isThisApi('/api/v10/vfs')).toBe(false);
+        expect(service.isThisApi('/content/pages')).toBe(false);
     });
 
     /**

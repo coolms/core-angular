@@ -173,6 +173,15 @@ export interface IdentityApiManifest {
     readonly colorUrl:            string;  // PATCH /auth/me/color
     readonly rolesUrl?:           string;  // GET /api/v1/identity/roles
     readonly elevationUrl?:       string;  // GET / POST / DELETE /api/v1/auth/elevation
+    // The deletion screens: the list, the declarations, and the per-account
+    // patterns the user page reads and acts on. Optional: an older server
+    // does not send them and the client then shows no deletion surfaces.
+    readonly deletionsUrl?:       string;  // GET /auth/deletions (RQL)
+    readonly footprintsUrl?:      string;  // GET /auth/footprints
+    readonly userDeletionUrl?:    string;  // GET / DELETE /auth/users/{id}/deletion pattern
+    readonly userLegalHoldsUrl?:  string;  // GET / POST /auth/users/{id}/legal-holds pattern; DELETE .../{holdId}
+    readonly holdsSettingsBlock?: string;  // the holds register's settings block key
+    readonly legalHoldFormId?:    string | null; // the form rendered to place a hold
 }
 
 /**

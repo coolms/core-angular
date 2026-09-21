@@ -268,13 +268,17 @@ export interface PlatformDefaults {
 }
 
 /**
- * The host contracts in force here (the platform rule: hosts implement contracts, modules offer entries): what the active
- * theme declares, and the installed modules whose entries the installer
- * matched against it. A host mounts a module only when it is listed.
+ * The host contracts in force here (the platform rule: hosts implement
+ * contracts, modules offer entries): for each contract, what the one
+ * installed theme implementing it declares, and the installed modules whose
+ * entries the installer matched against it. A host mounts a module only when
+ * it is listed.
  */
 export interface UiApiManifest {
-    /** The active theme's declared contracts, name -> MAJOR.MINOR (`{ console: '1.0' }`). */
+    /** The contracts in force, name -> MAJOR.MINOR (`{ console: '1.0' }`): one installed theme implements each. */
     readonly contracts: Readonly<Record<string, string>>;
+    /** Which installed theme implements each contract, name -> theme slug. */
+    readonly hosts?: Readonly<Record<string, string>>;
     readonly modules: ReadonlyArray<UiModuleEntryManifest>;
 }
 

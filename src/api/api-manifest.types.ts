@@ -267,8 +267,27 @@ export interface PlatformDefaults {
     readonly accentColor?: string | null;
 }
 
+/**
+ * The host contracts in force here (the platform rule: hosts implement contracts, modules offer entries): what the active
+ * theme declares, and the installed modules whose entries the installer
+ * matched against it. A host mounts a module only when it is listed.
+ */
+export interface UiApiManifest {
+    /** The active theme's declared contracts, name -> MAJOR.MINOR (`{ console: '1.0' }`). */
+    readonly contracts: Readonly<Record<string, string>>;
+    readonly modules: ReadonlyArray<UiModuleEntryManifest>;
+}
+
+export interface UiModuleEntryManifest {
+    readonly module:    string;
+    readonly contract:  string;
+    readonly range:     string;
+    readonly framework: string;
+}
+
 export interface ApiManifest {
     readonly apiBase:           string;
+    readonly ui?:               UiApiManifest;
     readonly configBase?:       string;  // GET /api/v1/config/{type}/{id}
     readonly auth?:             AuthApiManifest;
     readonly identity?:         IdentityApiManifest;

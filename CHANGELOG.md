@@ -37,7 +37,10 @@ predate this file would be a worse record than not having them.
   `ui.modules` says is installed: the tiles, overlays and panels to render,
   and the modules named but missing from the build), and `ConsolePanelHost`,
   the port a dock panel talks back through. `ApiManifest.ui` mirrors the
-  backend's section.
+  backend's section. The mount's `canMatch` answers once `AppInitService`
+  signals ready: the router recognises a pasted module URL while the
+  initializer is still fetching the manifest, and a synchronous read there
+  sent every cold deep link to the dashboard.
 - Declares `bugs` so a page imported from this package, and the catalogue,
   know where a correction is filed. The registry filled the gap from GitHub when
   the manifest was silent; the declared field is the one that holds on any

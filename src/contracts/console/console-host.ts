@@ -11,7 +11,9 @@ import {
 } from '@angular/core';
 import type { CanMatchFn, Route, Routes } from '@angular/router';
 import { provideStore, Store } from '@ngxs/store';
+import { map, take, type Observable } from 'rxjs';
 import type { ApiManifest } from '../../api/api-manifest.types';
+import { AppInitService } from '../../bootstrap/app-init.service';
 import { ComponentRegistry } from '../../navi-graph/component-registry';
 import { AppConfigState } from '../../state/app-config.state';
 import {
@@ -85,9 +87,21 @@ export class ConsoleActivation {
     }
 }
 
-/** `canMatch` for a module's mount: the route exists only where the module is installed. */
+/**
+ * `canMatch` for a module's mount: the route exists only where the module is
+ * installed. Answered once the manifest is in: on a cold deep link the router
+ * recognises the URL while the initializer is still fetching `/theme/config`
+ * (the two run as parallel initializers), and a synchronous read then found
+ * no module installed, so every pasted module URL fell to the wildcard and
+ * landed on the dashboard (measured 2026-09-22: no chunk requested for the
+ * mount, the dashboard's instead). `ready$` is what the auth guard waits on
+ * too, and it fires whether or not the config fetch succeeded.
+ */
 export function consoleModuleInstalled(module: string): CanMatchFn {
-    return () => inject(ConsoleActivation).isInstalled(module);
+    return (): Observable<boolean> => {
+        const activation = inject(ConsoleActivation);
+        return inject(AppInitService).ready$.pipe(take(1), map(() => activation.isInstalled(module)));
+    };
 }
 
 /**

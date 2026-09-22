@@ -1,8 +1,9 @@
-import { ApplicationInitStatus, Component, InjectionToken } from '@angular/core';
+import { ApplicationInitStatus, Component, InjectionToken, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, type Route } from '@angular/router';
 import { Store } from '@ngxs/store';
-import { of } from 'rxjs';
+import { firstValueFrom, of, ReplaySubject, type Observable } from 'rxjs';
+import { AppInitService } from '../../bootstrap/app-init.service';
 
 import { ComponentRegistry } from '../../navi-graph/component-registry';
 import { consoleChildren, ConsoleActivation, CONSOLE_ENTRIES, provideConsole } from './console-host';
@@ -95,15 +96,27 @@ describe('console@1 -- the host side', () => {
         { module: 'absent',    contract: 'console', range: '^1.0', framework: 'angular' },
     ] } };
 
+    // A real signal for the manifest and a subject for ready$: the cold-load
+    // spec below sets the one and fires the other in the order the app does.
+    let manifest: WritableSignal<typeof MANIFEST | null>;
+    let ready: ReplaySubject<void>;
+
     beforeEach(() => {
+        manifest = signal<typeof MANIFEST | null>(MANIFEST);
+        ready = new ReplaySubject<void>(1);
+        ready.next();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
-                { provide: Store, useValue: { selectSignal: () => () => MANIFEST, selectSnapshot: () => MANIFEST, select: () => of(MANIFEST) } },
+                { provide: Store, useValue: { selectSignal: () => manifest, selectSnapshot: () => manifest(), select: () => of(manifest()) } },
+                { provide: AppInitService, useValue: { ready$: ready.asObservable() } },
                 { provide: CONSOLE_ENTRIES, useValue: entries },
             ],
         });
     });
+
+    const askGuard = (route: Route): Promise<boolean> =>
+        firstValueFrom(TestBed.runInInjectionContext(() => (route.canMatch![0] as () => Observable<boolean>)()));
 
  it('activates by the manifest: the installed module renders, the dormant one does not, the absent one is named', () => {
         const activation = TestBed.inject(ConsoleActivation);
@@ -114,7 +127,7 @@ describe('console@1 -- the host side', () => {
         expect(activation.missing()).toEqual(['absent']);
     });
 
- it('mounts each route lazily with its nav hint as data and the module as its canMatch', () => {
+ it('mounts each route lazily with its nav hint as data and the module as its canMatch', async () => {
         const routes = consoleChildren(entries);
         expect(routes.map(r => r.path)).toEqual(['inst', 'old', 'dorm']);
         expect(routes[0].data).toEqual({ activeNav: '/inst', fullHeight: true });
@@ -123,10 +136,35 @@ describe('console@1 -- the host side', () => {
         expect(routes[2].loadChildren).toBeDefined();
         expect(routes[2].canMatch?.length).toBe(1);
  // The guard, asked inside the injector: yes for the installed module, no for the dormant one.
-        const yes = TestBed.runInInjectionContext(() => (routes[0].canMatch![0] as () => boolean)());
-        const no  = TestBed.runInInjectionContext(() => (routes[2].canMatch![0] as () => boolean)());
-        expect(yes).toBeTrue();
-        expect(no).toBeFalse();
+        expect(await askGuard(routes[0])).toBeTrue();
+        expect(await askGuard(routes[2])).toBeFalse();
+    });
+
+ // A pasted module URL: the router asks canMatch while the initializer is
+ // still fetching the manifest. The guard must hold its answer until the
+ // manifest is in, and then answer from it -- a synchronous read here said
+ // "no" for every module and every deep link landed on the dashboard.
+ it('a cold deep link waits for the manifest instead of answering from an empty store', async () => {
+        manifest.set(null);
+        ready = new ReplaySubject<void>(1);
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([]),
+                { provide: Store, useValue: { selectSignal: () => manifest, selectSnapshot: () => manifest(), select: () => of(manifest()) } },
+                { provide: AppInitService, useValue: { ready$: ready.asObservable() } },
+                { provide: CONSOLE_ENTRIES, useValue: entries },
+            ],
+        });
+        const routes = consoleChildren(entries);
+        let answered: boolean | undefined;
+        const pending = askGuard(routes[0]).then(v => { answered = v; return v; });
+        await Promise.resolve();
+        expect(answered).toBeUndefined();
+ // The initializer lands the config, then signals ready -- the app's order.
+        manifest.set(MANIFEST);
+        ready.next();
+        expect(await pending).toBeTrue();
     });
 
  it('provideConsole binds every entry`s names into the registry', async () => {

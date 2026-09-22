@@ -95,7 +95,8 @@ export interface ConsoleOverlay {
 export interface ConsolePanel {
     readonly id: string;
     readonly dock: 'bottom';
-    readonly toggle: { readonly icon: string; readonly label: string };
+    /** The top-bar toggle: a label (the title), an icon name or a short text, and a key the host binds with Ctrl. */
+    readonly toggle: { readonly label: string; readonly icon?: string; readonly text?: string; readonly key?: string };
     readonly component: Type<unknown>;
 }
 

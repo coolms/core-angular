@@ -72,6 +72,12 @@ export * from './navi-graph/navi-graph.service';
 export * from './navi-graph/navi-graph.types';
 export * from './navi-graph/component-registry';
 
+// -- Host contracts (the platform rule: hosts implement contracts, modules offer entries) -------------------------------------
+// `console@1`: the types a module's entry is written against, and the host
+// side a theme calls to assemble, activate and provide the entries.
+export * from './contracts/console/console-v1';
+export * from './contracts/console/console-host';
+
 // -- Section scoping ----------------------------------------------------------
 // The interceptor stamps `X-CoolMS-Section`; the port is how the app tells it
 // which section is active without core naming a feature.

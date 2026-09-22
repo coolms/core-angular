@@ -24,6 +24,23 @@ predate this file would be a worse record than not having them.
 
 ### Added
 
+- `console@1`, the administration host contract (the platform rule: hosts implement contracts, modules offer entries):
+  `ConsoleEntry` and the six lists a module contributes as data (`routes`,
+  `bindings`, `topbar`, `overlays`, `panels`, `states`, `providers`),
+  `consoleEntry()` for an entry file that exports one object and runs nothing,
+  `assembleConsole()` which refuses a range this contract does not meet and
+  every collision (a path, a binding name, a top-bar id, a port claimed by two
+  modules) by name, and the host side a theme calls: `consoleChildren()` (one
+  lazy child per mount, `canMatch` from the manifest), `provideConsole()` (the
+  store with the host's and the modules' states, the registry bindings as an
+  initializer, every provision), `ConsoleActivation` (what the backend's
+  `ui.modules` says is installed: the tiles, overlays and panels to render,
+  and the modules named but missing from the build), and `ConsolePanelHost`,
+  the port a dock panel talks back through. `ApiManifest.ui` mirrors the
+  backend's section. The mount's `canMatch` answers once `AppInitService`
+  signals ready: the router recognises a pasted module URL while the
+  initializer is still fetching the manifest, and a synchronous read there
+  sent every cold deep link to the dashboard.
 - Declares `bugs` so a page imported from this package, and the catalogue,
   know where a correction is filed. The registry filled the gap from GitHub when
   the manifest was silent; the declared field is the one that holds on any

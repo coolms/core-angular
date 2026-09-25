@@ -11,6 +11,15 @@ import { Logout, SetTokens } from './auth.actions';
 const LOCK_NAME = 'coolms_auth_refresh';
 const FRESH_TOKEN_GRACE_MS = 30_000;
 
+/** Where AuthState persists the session, shared by every tab of the origin. */
+const STORAGE_KEY = 'coolms_token';
+
+interface SharedTokens {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: string;
+}
+
 /**
  * Two-layer refresh coordinator: an intra-tab `shareReplay(1)`
  * mutex dedupes concurrent callers within one tab, and a
@@ -34,6 +43,26 @@ const FRESH_TOKEN_GRACE_MS = 30_000;
  * (real auth failure). Transient errors (network blips, 5xx,
  * CORS, timeouts) propagate without clearing the session so a
  * momentary refresh failure does not kill a valid login.
+ *
+ * A token the server REFUSED (2026-09-26). A caller answering a 401
+ * passes the access token that was refused. Until then the lock body
+ * handed back the cached token whenever its expiry looked fresh --
+ * which a revoked token's does: a session ended on the server (a
+ * sign-out everywhere from another device, a password change) was
+ * retried with the same dead token and never refreshed, so the client
+ * stayed signed in, and in its calls, until the token neared expiry
+ * (measured: a 1:1 call kept for the whole 30 s window, every request
+ * answered 401). Now the lock body re-reads the SHARED copy
+ * (`localStorage`, which every tab's `SetTokens` writes synchronously;
+ * this tab's state only follows a sibling's write when its `storage`
+ * event arrives):
+ *   - a different access token there -> another tab (or an earlier
+ *     refresh here) already rotated past the refused one: use it, no
+ *     request;
+ *   - the same one -> the server refused this token: refresh, with the
+ *     newest refresh token -- the shared one, so a rotation a sibling
+ *     made is never replayed with the token it consumed. A 401 there
+ *     is the session's end: `Logout`.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthRefreshCoordinator {
@@ -47,14 +76,20 @@ export class AuthRefreshCoordinator {
      * Return the in-flight refresh Observable, or spawn a new one
      * with the supplied refresh-token value.
      *
+     * `refusedAccessToken`: the access token the server just answered
+     * 401 to, when the caller is answering one. With it, the lock body
+     * refreshes unless the shared copy already holds another token;
+     * without it (a preemptive refresh), a fresh-looking cached token
+     * is handed back as before.
+     *
      * Callers subscribe via `switchMap` / `firstValueFrom` to retry
      * their original request with the resolved access token.
      */
-    refresh(refreshToken: string): Observable<string> {
+    refresh(refreshToken: string, refusedAccessToken: string | null = null): Observable<string> {
         if (this.inFlight) {
             return this.inFlight;
         }
-        this.inFlight = defer(() => this.refreshWithCrossTabLock(refreshToken)).pipe(
+        this.inFlight = defer(() => this.refreshWithCrossTabLock(refreshToken, refusedAccessToken)).pipe(
             catchError(refreshErr => {
                 const isAuthFailure = refreshErr instanceof HttpErrorResponse && refreshErr.status === 401;
                 if (isAuthFailure) {
@@ -79,8 +114,8 @@ export class AuthRefreshCoordinator {
      * body checks for state already updated by a sibling tab before
      * issuing its own HTTP call.
      */
-    private refreshWithCrossTabLock(refreshToken: string): Observable<string> {
-        const lockBody = (): Promise<string> => this.executeRefresh(refreshToken);
+    private refreshWithCrossTabLock(refreshToken: string, refusedAccessToken: string | null): Observable<string> {
+        const lockBody = (): Promise<string> => this.executeRefresh(refreshToken, refusedAccessToken);
 
         if (typeof navigator === 'undefined' || !('locks' in navigator)) {
             return from(lockBody());
@@ -96,32 +131,76 @@ export class AuthRefreshCoordinator {
     }
 
     /**
-     * Lock body. Re-reads `AuthState.expiresAt` first: if another
-     * tab published fresh tokens while we were queued, return the
-     * cached access token directly. Otherwise read the latest
-     * refresh-token value from state (it may have rotated while we
-     * waited) and issue the HTTP refresh.
+     * Lock body. Re-reads the shared copy first (see the class note).
+     *
+     * Answering a refusal: a shared access token other than the refused
+     * one is a rotation already made -- taken, and mirrored into this
+     * tab's state if its `storage` event has not arrived yet. Otherwise,
+     * or for a preemptive caller whose cached token no longer looks
+     * fresh, the HTTP refresh, with the newest refresh token: shared,
+     * then state, then the caller's.
      */
-    private async executeRefresh(originalRefreshToken: string): Promise<string> {
-        const cachedAccess = this.tryConsumeFreshState();
-        if (cachedAccess !== null) {
-            return cachedAccess;
+    private async executeRefresh(originalRefreshToken: string, refusedAccessToken: string | null): Promise<string> {
+        const shared = this.readShared();
+        if (refusedAccessToken !== null) {
+            if (shared !== null && shared.accessToken !== refusedAccessToken) {
+                if (this.store.selectSnapshot(AuthState.accessToken) !== shared.accessToken) {
+                    this.store.dispatch(new SetTokens(shared));
+                }
+                return shared.accessToken;
+            }
+        } else {
+            const cachedAccess = this.tryConsumeFreshState(shared);
+            if (cachedAccess !== null) {
+                return cachedAccess;
+            }
         }
-        const currentRefreshToken = this.store.selectSnapshot(AuthState.refreshToken) ?? originalRefreshToken;
+        const currentRefreshToken = shared?.refreshToken
+            ?? this.store.selectSnapshot(AuthState.refreshToken)
+            ?? originalRefreshToken;
         const response = await firstValueFrom(this.api.refresh(currentRefreshToken));
         this.store.dispatch(new SetTokens(response));
         return response.accessToken;
     }
 
     /**
-     * Return the cached access token when `AuthState.expiresAt` has
-     * more than `FRESH_TOKEN_GRACE_MS` milliseconds remaining --
-     * signalling that some other tab refreshed for us. Null
-     * otherwise.
+     * The session as the tabs share it, or null when there is none to
+     * read: no storage, nothing stored (signed out), or a value that is
+     * not a complete token set.
      */
-    private tryConsumeFreshState(): string | null {
-        const accessToken = this.store.selectSnapshot(AuthState.accessToken);
-        const expiresAtStr = this.store.selectSnapshot(AuthState.expiresAt);
+    private readShared(): SharedTokens | null {
+        let raw: string | null;
+        try {
+            raw = localStorage.getItem(STORAGE_KEY);
+        } catch {
+            return null;
+        }
+        if (raw === null) {
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(raw) as Partial<SharedTokens> | null;
+            if (typeof parsed?.accessToken !== 'string' || typeof parsed.refreshToken !== 'string' || typeof parsed.expiresAt !== 'string') {
+                return null;
+            }
+            return { accessToken: parsed.accessToken, refreshToken: parsed.refreshToken, expiresAt: parsed.expiresAt };
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * For a preemptive caller only: return the current access token when
+     * its expiry is more than `FRESH_TOKEN_GRACE_MS` milliseconds away --
+     * signalling that some other tab refreshed for us. The shared copy
+     * first, which a sibling's rotation reaches before this tab's state
+     * does (mirrored here when it is newer); this tab's state when there
+     * is none. Null otherwise. Never asked for a token the server
+     * refused: a refused token's expiry looks just as fresh.
+     */
+    private tryConsumeFreshState(shared: SharedTokens | null): string | null {
+        const accessToken = shared?.accessToken ?? this.store.selectSnapshot(AuthState.accessToken);
+        const expiresAtStr = shared?.expiresAt ?? this.store.selectSnapshot(AuthState.expiresAt);
         if (accessToken === null || expiresAtStr === null) {
             return null;
         }
@@ -129,9 +208,12 @@ export class AuthRefreshCoordinator {
         if (Number.isNaN(expiresAtMs)) {
             return null;
         }
-        if (Date.now() < expiresAtMs - FRESH_TOKEN_GRACE_MS) {
-            return accessToken;
+        if (Date.now() >= expiresAtMs - FRESH_TOKEN_GRACE_MS) {
+            return null;
         }
-        return null;
+        if (shared !== null && this.store.selectSnapshot(AuthState.accessToken) !== shared.accessToken) {
+            this.store.dispatch(new SetTokens(shared));
+        }
+        return accessToken;
     }
 }

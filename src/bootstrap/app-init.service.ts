@@ -161,17 +161,16 @@ export class AppInitService {
         }
         let refreshedToken: string | null = null;
         try {
-            refreshedToken = await firstValueFrom(this.refreshCoordinator.refresh(refreshToken));
+            refreshedToken = await firstValueFrom(this.refreshCoordinator.refresh(refreshToken, token));
         } catch {
             // 401 -> coordinator already dispatched Logout; transient -> session kept.
             return;
         }
-        // Refresh resolved -- but the coordinator's fresh-state optimisation can hand
-        // back the SAME access token (without a network round-trip) when its stored
-        // expiry still looks fresh. For a token that was revoked but not yet expired
-        // (signing out on the SSR site while the access token is still in its TTL),
-        // that token is dead despite looking fresh. Re-probe with whatever we now
-        // hold; a second rejection means the session is genuinely gone.
+        // Refresh resolved. Handed the refused token, the coordinator no longer
+        // returns that same token (2026-09-26) -- it did when its stored expiry
+        // looked fresh, which a revoked token's does. The re-probe stays: a
+        // second rejection means the session is genuinely gone, whatever path
+        // the coordinator took.
         if (!(await this.probe(meUrl, refreshedToken))) {
             this.store.dispatch(new Logout());
         }

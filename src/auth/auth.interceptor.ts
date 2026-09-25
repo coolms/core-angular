@@ -87,7 +87,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                     // would send the same refresh-token twice and trigger the
                     // backend's `isUsed` replay branch on the second arrival,
                     // wiping the whole session.
-                    return coordinator.refresh(refreshToken).pipe(
+                    //
+                    // With the token that was refused, so the coordinator
+                    // refreshes rather than hand the same dead token back
+                    // because its expiry still looks fresh (a session ended
+                    // on the server went unnoticed until then, 2026-09-26).
+                    return coordinator.refresh(refreshToken, token).pipe(
                         switchMap(newToken =>
                             next(req.clone({ setHeaders: { Authorization: `Bearer ${newToken}` } })),
                         ),

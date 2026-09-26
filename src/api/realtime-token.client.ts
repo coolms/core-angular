@@ -15,6 +15,13 @@ export interface CentrifugoConnectionTokenDto {
     expiresAt:  number;
     ttl:        number;
     wsUrl:      string;
+    /**
+     * The code the server closes this connection with when the caller's session
+     * ended (a sign-out everywhere, a password change, a deactivation). On it the
+     * client signs out and ends its calls at once, without reconnecting or waiting
+     * for a 401 (2026-09-26). Absent from a server older than that.
+     */
+    sessionEndedCode?: number;
 }
 
 /**

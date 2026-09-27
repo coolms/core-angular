@@ -24,6 +24,12 @@ predate this file would be a worse record than not having them.
 
 ### Added
 
+- `ElevationService` and the rest of the elevation client in the public API:
+  `elevationInterceptor`, `BYPASS_ELEVATION`, `ELEVATION_REQUIRED_HEADER`,
+  `ELEVATION_PROMPT` and the three `ELEVATION_WARNING_*` reasons. 2.0.0-alpha.3
+  did not export them, so a package importing `ElevationService` from the
+  published build failed to compile (TS2305) -- the reason this release was cut.
+  Measured on the bundles: 30 runtime exports in alpha.3, 51 here, none removed.
 - `console@1`, the administration host contract (the platform rule: hosts implement contracts, modules offer entries):
   `ConsoleEntry` and the six lists a module contributes as data (`routes`,
   `bindings`, `topbar`, `overlays`, `panels`, `states`, `providers`),
@@ -53,6 +59,14 @@ a site is not enabled for documents.
 
 Both optional, so a client built against an older backend simply hides the
 control rather than showing one that cannot work.
+
+### Fixed
+
+- The README named a package that does not exist (`@coolms/admin-ui-angular`),
+  said the package installs no toolchain of its own (it does, from its lockfile,
+  outside the workspace), said it was built against Angular 19 (it is built with
+  22 and peers on ^22), listed `@angular/cdk` as a peer (it is not one), and said
+  `latest` waits for a stable release (npm points it at the newest alpha).
 
 ## 2.0.0-alpha.3 -- 2026-09-03
 

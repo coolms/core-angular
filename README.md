@@ -20,11 +20,10 @@ it is only useful against a CoolMS backend.
 
 ## Layering
 
-```
-@coolms/core-angular  ->  @coolms/admin-ui-angular  ->  @coolms/<module>-ui-angular
-```
-
-The naming rule: `-angular` is a library, `-ui-angular` ships components.
+The bottom of the CoolMS Angular packages: it has no `@coolms` peers of its own.
+The UI kit (`@coolms/ui-angular`) and the feature packages -- the editors, the
+viewers and the rest of `@coolms/*-angular` -- build on it; nothing here depends
+on them.
 
 The reason this is a package rather than application code is federation. The UI
 kit and every federated remote need the session, config, error handling and
@@ -47,20 +46,22 @@ npm run build
 
 Produces `dist/` — FESM 2022 bundles plus type definitions, compiled in Angular's
 *partial* mode so the consuming application's own compiler finishes the job. That
-is what keeps a package built against 19.x working as an application moves
-forward. `@angular/*`, `@ngxs/store` and `rxjs` stay external, as peers.
+is what keeps a build made with one Angular 22 release working in an application
+on a later one within the peer range. `@angular/*`, `@ngxs/store` and `rxjs` stay external, as peers.
 
-The build runs through the admin application's `ng-packagr`, because this package
-deliberately installs **no toolchain and no framework of its own**: its
-`node_modules` is a relative symlink to the admin's, so exactly one `@angular`
-tree is ever in play. A second copy would give two type identities for the same
-class while the package is consumed from source.
+On its own -- a clone, or CI -- it installs its toolchain (`ng-packagr`, the
+Angular compiler, TypeScript) from its committed lockfile, and that is how a
+published build is made. Inside the CoolMS workspace its `node_modules` is instead
+a relative symlink to the admin application's, so exactly one `@angular` tree is
+in play while the admin consumes this package from source: a second copy would
+give two type identities for the same class.
 
 ## Status
 
 A pre-release: the shape is still moving and it carries no compatibility
-promise. Published under the `alpha` dist-tag; `latest` will move to the first
-stable release when there is one.
+promise. Published under the `alpha` dist-tag. Until a stable release exists, `latest`
+points at the newest alpha as well -- npm set it on the first publish -- so a bare
+`npm install @coolms/core-angular` gets a pre-release.
 
 The CoolMS admin application consumes it from source via a TypeScript path
 mapping rather than from the registry, so the published build and the one the
@@ -68,7 +69,7 @@ admin runs are produced the same way but resolved differently.
 
 ## Requirements
 
-Angular, NGXS, RxJS and `@angular/cdk` are peers; the supported ranges are declared in `package.json`, which is what an install actually checks.
+Angular (`common`, `core`, `forms`, `router`), NGXS and RxJS are peers; the supported ranges are declared in `package.json`, which is what an install actually checks.
 
 ## Licence
 

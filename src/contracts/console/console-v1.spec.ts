@@ -4,6 +4,7 @@ import { provideRouter, type Route } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { firstValueFrom, of, ReplaySubject, type Observable } from 'rxjs';
 import { AppInitService } from '../../bootstrap/app-init.service';
+import { type ConsoleAccess, ConsoleAccessService } from '../../bootstrap/console-access.service';
 
 import { ComponentRegistry } from '../../navi-graph/component-registry';
 import { consoleChildren, ConsoleActivation, CONSOLE_ENTRIES, provideConsole } from './console-host';
@@ -100,17 +101,21 @@ describe('console@1 -- the host side', () => {
     // spec below sets the one and fires the other in the order the app does.
     let manifest: WritableSignal<typeof MANIFEST | null>;
     let ready: ReplaySubject<void>;
+    // What the console's own manifest answers; nobody signed in, it answers at once.
+    let ensure: () => Promise<ConsoleAccess>;
 
     beforeEach(() => {
         manifest = signal<typeof MANIFEST | null>(MANIFEST);
         ready = new ReplaySubject<void>(1);
         ready.next();
+        ensure = () => Promise.resolve('unknown');
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
                 { provide: Store, useValue: { selectSignal: () => manifest, selectSnapshot: () => manifest(), select: () => of(manifest()) } },
                 { provide: AppInitService, useValue: { ready$: ready.asObservable() } },
                 { provide: CONSOLE_ENTRIES, useValue: entries },
+                { provide: ConsoleAccessService, useValue: { ensure: () => ensure() } },
             ],
         });
     });
@@ -154,6 +159,7 @@ describe('console@1 -- the host side', () => {
                 { provide: Store, useValue: { selectSignal: () => manifest, selectSnapshot: () => manifest(), select: () => of(manifest()) } },
                 { provide: AppInitService, useValue: { ready$: ready.asObservable() } },
                 { provide: CONSOLE_ENTRIES, useValue: entries },
+                { provide: ConsoleAccessService, useValue: { ensure: () => ensure() } },
             ],
         });
         const routes = consoleChildren(entries);
@@ -165,6 +171,32 @@ describe('console@1 -- the host side', () => {
         manifest.set(MANIFEST);
         ready.next();
         expect(await pending).toBeTrue();
+    });
+
+ // Signed in, the modules arrive with the console's own manifest: the public
+ // config no longer carries them, and canMatch runs before the layout's guard
+ // asks for it. Answered from the public config alone, every module was "no".
+ it('signed in, a module route waits for the console manifest and answers from it', async () => {
+        const publicConfig = { apiBase: MANIFEST.apiBase };
+        manifest.set(publicConfig as typeof MANIFEST);
+        let grant!: (access: ConsoleAccess) => void;
+        ensure = () => new Promise<ConsoleAccess>(resolve => { grant = resolve; });
+        const routes = consoleChildren(entries);
+        let answered: boolean | undefined;
+        const pending = askGuard(routes[0]).then(v => { answered = v; return v; });
+        await Promise.resolve();
+        expect(answered).toBeUndefined();
+ // The console manifest is merged, then the ask resolves -- the service's order.
+        manifest.set(MANIFEST);
+        grant('granted');
+        expect(await pending).toBeTrue();
+    });
+
+ it('refused, nothing is merged and the module route does not match', async () => {
+        const publicConfig = { apiBase: MANIFEST.apiBase };
+        manifest.set(publicConfig as typeof MANIFEST);
+        ensure = () => Promise.resolve('refused');
+        expect(await askGuard(consoleChildren(entries)[0])).toBeFalse();
     });
 
  it('provideConsole binds every entry`s names into the registry', async () => {

@@ -11,9 +11,10 @@ import {
 } from '@angular/core';
 import type { CanMatchFn, Route, Routes } from '@angular/router';
 import { provideStore, Store } from '@ngxs/store';
-import { map, take, type Observable } from 'rxjs';
+import { from, map, switchMap, take, type Observable } from 'rxjs';
 import type { ApiManifest } from '../../api/api-manifest.types';
 import { AppInitService } from '../../bootstrap/app-init.service';
+import { ConsoleAccessService } from '../../bootstrap/console-access.service';
 import { ComponentRegistry } from '../../navi-graph/component-registry';
 import { AppConfigState } from '../../state/app-config.state';
 import {
@@ -96,11 +97,24 @@ export class ConsoleActivation {
  * landed on the dashboard (measured 2026-09-22: no chunk requested for the
  * mount, the dashboard's instead). `ready$` is what the auth guard waits on
  * too, and it fires whether or not the config fetch succeeded.
+ *
+ * !! Then the console's own manifest, when someone is signed in: `ui.modules` is
+ * the console's, not the public config's, and arrives with it
+ * ({@link ConsoleAccessService}). canMatch runs before the layout's auth guard,
+ * which asks the same question, so answering from the public config alone said
+ * "no" to every module once that config stopped carrying them. Nobody signed in:
+ * nothing is asked, the answer is the public config's, and the layout's guard
+ * sends the person to sign in. A refusal merges nothing, so the answer is no.
  */
 export function consoleModuleInstalled(module: string): CanMatchFn {
     return (): Observable<boolean> => {
-        const activation = inject(ConsoleActivation);
-        return inject(AppInitService).ready$.pipe(take(1), map(() => activation.isInstalled(module)));
+        const activation    = inject(ConsoleActivation);
+        const consoleAccess = inject(ConsoleAccessService);
+        return inject(AppInitService).ready$.pipe(
+            take(1),
+            switchMap(() => from(consoleAccess.ensure())),
+            map(() => activation.isInstalled(module)),
+        );
     };
 }
 

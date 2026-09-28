@@ -4,7 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Actions, ActionStatus, Store } from '@ngxs/store';
 import { firstValueFrom, of, Subject } from 'rxjs';
 import { ConsoleAccessService } from './console-access.service';
-import { Logout } from '../auth/auth.actions';
+import { Login, Logout } from '../auth/auth.actions';
+import { AuthState } from '../auth/auth.state';
 import { AppConfigState, SetAppConfig } from '../state/app-config.state';
 
 /**
@@ -16,8 +17,11 @@ import { AppConfigState, SetAppConfig } from '../state/app-config.state';
  *   2. 403: `refused`, and kept: the guard does not ask again for this sign-in.
  *   3. 500: `unknown`, and NOT kept -- a failure to ask is not an answer.
  *   4. A Logout makes the next navigation ask again (another sign-in, another answer).
- *   5. An answer that arrives after a sign-out is kept for nobody: the one waiting on
- *      it is answered for the sign-in there is now (A's late 403 must not sign B out).
+ *   5. An answer that arrives after a change of account is kept for nobody: the one
+ *      waiting on it is answered for the sign-in there is now (A's late 403 must not
+ *      sign B out).
+ *   5b. After a sign-out with nobody signed in, nothing more is asked -- the re-ask
+ *      would go out with no token, and its 401 would sign out again, and again.
  *   6. Signing a refused account out ends the sign-in on the server, then here -- and
  *      here even when the server's answer is an error.
  */
@@ -26,6 +30,7 @@ describe('ConsoleAccessService', () => {
     let httpMock: HttpTestingController;
     let dispatched: unknown[];
     let actions$: Subject<unknown>;
+    let signedIn: boolean;
 
     const publicConfig = {
         slug: 'admin',
@@ -35,6 +40,7 @@ describe('ConsoleAccessService', () => {
     beforeEach(() => {
         dispatched = [];
         actions$ = new Subject<unknown>();
+        signedIn = true;
         TestBed.configureTestingModule({
             providers: [
                 provideHttpClient(),
@@ -42,8 +48,12 @@ describe('ConsoleAccessService', () => {
                 {
                     provide: Store,
                     useValue: {
-                        selectSnapshot: (selector: unknown) =>
-                            AppConfigState.manifest === selector ? publicConfig.manifest : publicConfig,
+                        selectSnapshot: (selector: unknown) => {
+                            if (AuthState.isAuthenticated === selector) {
+                                return signedIn;
+                            }
+                            return AppConfigState.manifest === selector ? publicConfig.manifest : publicConfig;
+                        },
                         dispatch: (action: unknown) => { dispatched.push(action); return of(undefined); },
                     },
                 },
@@ -106,11 +116,12 @@ describe('ConsoleAccessService', () => {
         expect(await second).toBe('granted');
     });
 
-    it('keeps an answer that arrives after a sign-out for nobody, and asks for the sign-in there is now', async () => {
+    it('keeps an answer that arrives after a change of account for nobody, and asks for the sign-in there is now', async () => {
         const waiting = service.ensure();
         const late = httpMock.expectOne(ConsoleAccessService.URL);
 
         actions$.next({ action: new Logout(), status: ActionStatus.Dispatched });
+        actions$.next({ action: new Login('b@example.test', 'x'), status: ActionStatus.Dispatched });
         late.flush({}, { status: 403, statusText: 'Forbidden' });
         // Every microtask the late answer schedules runs before a macrotask does.
         await new Promise(resolve => setTimeout(resolve));
@@ -119,6 +130,20 @@ describe('ConsoleAccessService', () => {
         expect(await waiting).toBe('granted');
         expect(await service.ensure()).toBe('granted');
         httpMock.expectNone(ConsoleAccessService.URL);
+    });
+
+    it('asks nothing more after a sign-out that leaves nobody signed in', async () => {
+        const waiting = service.ensure();
+        const late = httpMock.expectOne(ConsoleAccessService.URL);
+
+        signedIn = false;
+        actions$.next({ action: new Logout(), status: ActionStatus.Dispatched });
+        late.flush({}, { status: 403, statusText: 'Forbidden' });
+        await new Promise(resolve => setTimeout(resolve));
+
+        httpMock.expectNone(ConsoleAccessService.URL);
+        expect(await waiting).toBe('unknown');
+        expect(dispatched.length).toBe(0);
     });
 
     it('signs a refused account out on the server, then here', async () => {

@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Actions, ofActionDispatched, Store } from '@ngxs/store';
 import { catchError, firstValueFrom, map, type Observable, of, switchMap } from 'rxjs';
 import { Login, Logout, RestoreSession } from '../auth/auth.actions';
+import { AuthState } from '../auth/auth.state';
 import { AppConfigState, SetAppConfig } from '../state/app-config.state';
 import { type ConsoleManifestResponse } from '../api/api-manifest.types';
 
@@ -33,6 +34,11 @@ interface Asked {
  * restored session starts a new generation; an answer that arrives for a generation
  * that is gone is kept for nobody -- A's late 403 must not sign B out -- and whoever
  * is waiting on it is answered for the sign-in there is now.
+ *
+ * !! With nobody signed in there is nothing to ask, and nothing is asked. Without
+ * that, the re-ask after a sign-out went out with no token, its 401 made the
+ * interceptor dispatch Logout, which started another generation, which re-asked:
+ * a loop for as long as the tab lived (found in review).
  */
 @Injectable({ providedIn: 'root' })
 export class ConsoleAccessService {
@@ -60,6 +66,9 @@ export class ConsoleAccessService {
 
     /** Ask once per sign-in; the manifest is merged into the app config when granted. */
     ensure(): Promise<ConsoleAccess> {
+        if (!this.store.selectSnapshot(AuthState.isAuthenticated)) {
+            return Promise.resolve('unknown');
+        }
         if ('unknown' !== this.answer) {
             return Promise.resolve(this.answer);
         }

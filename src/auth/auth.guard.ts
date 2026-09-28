@@ -35,14 +35,20 @@ export const authGuard: CanActivateFn = () => {
                 return of(router.createUrlTree(['/login']));
             }
             return from(consoleAccess.ensure()).pipe(
-                switchMap(access => 'refused' !== access
-                    ? of(true)
-                    : consoleAccess.signOut().pipe(
-                        map(() => router.createUrlTree(
-                            ['/login'],
-                            { queryParams: { reason: ConsoleAccessService.REFUSED_REASON } },
-                        )),
-                    )),
+                switchMap(access => {
+                    // Signed out while asking: nobody to open the console for.
+                    if (!store.selectSnapshot(AuthState.isAuthenticated)) {
+                        return of(router.createUrlTree(['/login']));
+                    }
+                    return 'refused' !== access
+                        ? of(true)
+                        : consoleAccess.signOut().pipe(
+                            map(() => router.createUrlTree(
+                                ['/login'],
+                                { queryParams: { reason: ConsoleAccessService.REFUSED_REASON } },
+                            )),
+                        );
+                }),
             );
         }),
     );

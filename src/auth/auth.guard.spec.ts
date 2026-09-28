@@ -16,13 +16,18 @@ import { ConsoleAccessService, type ConsoleAccess } from '../bootstrap/console-a
  *      login page says why.
  *   4. Unknown (the question failed): the route opens -- the server still decides
  *      every request the console makes.
+ *   5. Signed out while asking: the login page, not an open route for nobody.
  */
 describe('authGuard', () => {
     let dispatched: unknown[];
     let asked: number;
     let signedOut: number;
 
-    const run = async (authenticated: boolean, access: ConsoleAccess): Promise<boolean | UrlTree> => {
+    const run = async (
+        authenticated: boolean,
+        access: ConsoleAccess,
+        stillSignedIn: boolean = authenticated,
+    ): Promise<boolean | UrlTree> => {
         dispatched = [];
         asked = 0;
         signedOut = 0;
@@ -33,7 +38,7 @@ describe('authGuard', () => {
                 {
                     provide: Store,
                     useValue: {
-                        selectSnapshot: () => authenticated,
+                        selectSnapshot: () => (asked > 0 ? stillSignedIn : authenticated),
                         dispatch: (action: unknown) => { dispatched.push(action); return of(undefined); },
                     },
                 },
@@ -75,6 +80,11 @@ describe('authGuard', () => {
 
     it('opens when the question failed, and signs nobody out', async () => {
         expect(await run(true, 'unknown')).toBeTrue();
+        expect(signedOut).toBe(0);
+    });
+
+    it('sends a sign-in that ended while asking to the login page', async () => {
+        expect(url(await run(true, 'unknown', false))).toBe('/login');
         expect(signedOut).toBe(0);
     });
 });

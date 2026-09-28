@@ -1,8 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { type Observable } from 'rxjs';
+import { defer, switchMap, throwError, type Observable } from 'rxjs';
 
+import { ConsoleAccessService } from '../bootstrap/console-access.service';
 import { AppConfigState } from '../state/app-config.state';
 import type { ApiManifest } from './api-manifest.types';
 
@@ -49,11 +50,25 @@ export interface CentrifugoSubscriptionTokenDto {
  *
  * `ApiService` keeps its identical signatures and delegates here, so nothing
  * calling it had to change.
+ *
+ * !! Access first, then realtime (Dmitry, 2026-09-28): "The console opens a realtime
+ * connection before the access check. Reverse the order ... A refused account opens no
+ * socket." The socket cannot open without the connection token, and anything may ask for
+ * one early -- the ring subscription is built at app init and asks as soon as a user is
+ * set, before the guard's answer is in. So the token waits for the console's answer (the
+ * guard's own request, not a second one) and a refused sign-in gets none: no request, no
+ * socket. A failure to ask is not a refusal, as at the guard.
  */
 @Injectable({ providedIn: 'root' })
 export class RealtimeTokenClient {
+    /** The error a refused sign-in's connection-token request ends with. */
+    static readonly REFUSED = 'no console access: no realtime connection';
+
     private readonly http  = inject(HttpClient);
     private readonly store = inject(Store);
+    // Resolved when a connection token is asked for, not with this client: ApiService
+    // delegates here and is built in many places that never open a socket.
+    private readonly injector = inject(Injector);
 
     private get manifest(): ApiManifest {
         const m = this.store.selectSnapshot(AppConfigState.manifest);
@@ -62,8 +77,11 @@ export class RealtimeTokenClient {
     }
 
     connectionToken(): Observable<CentrifugoConnectionTokenDto> {
-        return this.http.post<CentrifugoConnectionTokenDto>(
-            this.manifest.apiBase + '/centrifugo/connection-token', {});
+        return defer(() => this.injector.get(ConsoleAccessService).ensure()).pipe(
+            switchMap(access => 'refused' === access
+                ? throwError(() => new Error(RealtimeTokenClient.REFUSED))
+                : this.http.post<CentrifugoConnectionTokenDto>(this.manifest.apiBase + '/centrifugo/connection-token', {})),
+        );
     }
 
     subscriptionToken(channel: string): Observable<CentrifugoSubscriptionTokenDto> {

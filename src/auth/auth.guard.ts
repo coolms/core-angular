@@ -5,7 +5,6 @@ import { Store } from '@ngxs/store';
 import { AuthState } from './auth.state';
 import { AppInitService } from '../bootstrap/app-init.service';
 import { ConsoleAccessService } from '../bootstrap/console-access.service';
-import { Logout } from './auth.actions';
 
 /**
  * Protects routes that require authentication.
@@ -19,8 +18,8 @@ import { Logout } from './auth.actions';
  *
  * Signed in is not enough: the console is granted, and the server says to whom
  * (ConsoleAccessService). An account it refuses -- a customer who registered on the
- * public site -- is signed out of this sign-in and sent to the login page, which says
- * why. A failure to ask is not a refusal: the console opens, and every request it
+ * public site -- is signed out of this sign-in, on the server as well as here, and
+ * sent to the login page, which says why. A failure to ask is not a refusal: the console opens, and every request it
  * makes is still decided by the server.
  */
 export const authGuard: CanActivateFn = () => {
@@ -38,7 +37,7 @@ export const authGuard: CanActivateFn = () => {
             return from(consoleAccess.ensure()).pipe(
                 switchMap(access => 'refused' !== access
                     ? of(true)
-                    : store.dispatch(new Logout()).pipe(
+                    : consoleAccess.signOut().pipe(
                         map(() => router.createUrlTree(
                             ['/login'],
                             { queryParams: { reason: ConsoleAccessService.REFUSED_REASON } },

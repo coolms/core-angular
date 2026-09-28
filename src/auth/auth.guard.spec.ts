@@ -3,7 +3,6 @@ import { provideRouter, Router, UrlTree, type ActivatedRouteSnapshot, type Route
 import { Store } from '@ngxs/store';
 import { firstValueFrom, isObservable, of, type Observable } from 'rxjs';
 import { authGuard } from './auth.guard';
-import { Logout } from './auth.actions';
 import { AppInitService } from '../bootstrap/app-init.service';
 import { ConsoleAccessService, type ConsoleAccess } from '../bootstrap/console-access.service';
 
@@ -13,17 +12,20 @@ import { ConsoleAccessService, type ConsoleAccess } from '../bootstrap/console-a
  * Coverage:
  *   1. Not signed in: the login page, and the console is not asked.
  *   2. Granted: the route opens.
- *   3. Refused: this sign-in is signed out, and the login page says why.
+ *   3. Refused: this sign-in is signed out (the service ends it on the server), and the
+ *      login page says why.
  *   4. Unknown (the question failed): the route opens -- the server still decides
  *      every request the console makes.
  */
 describe('authGuard', () => {
     let dispatched: unknown[];
     let asked: number;
+    let signedOut: number;
 
     const run = async (authenticated: boolean, access: ConsoleAccess): Promise<boolean | UrlTree> => {
         dispatched = [];
         asked = 0;
+        signedOut = 0;
         TestBed.configureTestingModule({
             providers: [
                 provideRouter([]),
@@ -35,7 +37,13 @@ describe('authGuard', () => {
                         dispatch: (action: unknown) => { dispatched.push(action); return of(undefined); },
                     },
                 },
-                { provide: ConsoleAccessService, useValue: { ensure: () => { asked++; return Promise.resolve(access); } } },
+                {
+                    provide: ConsoleAccessService,
+                    useValue: {
+                        ensure: () => { asked++; return Promise.resolve(access); },
+                        signOut: () => { signedOut++; return of(undefined); },
+                    },
+                },
             ],
         });
         const result = TestBed.runInInjectionContext(
@@ -56,17 +64,17 @@ describe('authGuard', () => {
 
     it('opens for an account the console is granted to', async () => {
         expect(await run(true, 'granted')).toBeTrue();
-        expect(dispatched.length).toBe(0);
+        expect(signedOut).toBe(0);
     });
 
     it('signs a refused account out and says why on the login page', async () => {
         expect(url(await run(true, 'refused'))).toBe('/login?reason=' + ConsoleAccessService.REFUSED_REASON);
-        expect(dispatched.length).toBe(1);
-        expect(dispatched[0] instanceof Logout).toBeTrue();
+        expect(signedOut).toBe(1);
+        expect(dispatched.length).toBe(0);
     });
 
     it('opens when the question failed, and signs nobody out', async () => {
         expect(await run(true, 'unknown')).toBeTrue();
-        expect(dispatched.length).toBe(0);
+        expect(signedOut).toBe(0);
     });
 });

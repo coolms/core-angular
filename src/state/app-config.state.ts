@@ -29,6 +29,12 @@ export class AppConfigState {
         ctx.setState({ config, loaded: true });
     }
 
+    /** The whole config as last set: the public theme config, with the console's manifest once granted. */
+    @Selector()
+    static config(state: AppConfigStateModel): ThemeConfigResponse | null {
+        return state.config;
+    }
+
     @Selector()
     static manifest(state: AppConfigStateModel): ApiManifest | null {
         return state.config?.manifest ?? null;

@@ -311,6 +311,14 @@ export interface ApiManifest {
     readonly platformDefaults?: PlatformDefaults;
 }
 
+/**
+ * GET /api/v1/console/manifest -- the console's endpoint map, answered to an account the
+ * console is granted to and refused (403) to any other. Read once signed in.
+ */
+export interface ConsoleManifestResponse {
+    readonly manifest: ApiManifest;
+}
+
 export interface ThemeConfigResponse {
     readonly slug?:          string | null;
     readonly feStack?:       string | null;

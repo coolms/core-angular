@@ -1,9 +1,11 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { Login } from '../auth.actions';
+import { ConsoleAccessService } from '../../bootstrap/console-access.service';
 
 @Component({
     selector: 'coolms-admin-login',
@@ -19,6 +21,20 @@ export class LoginComponent {
 
     private readonly store  = inject(Store);
     private readonly router = inject(Router);
+
+    /** Shown when the guard signed an account out because the console is not granted to it. */
+    static readonly NO_CONSOLE_ACCESS = 'This account has no access to the console.';
+
+    constructor() {
+        // Observed, not read once: after a sign-in the guard's redirect lands on this same
+        // page, and the component is reused rather than made again.
+        inject(ActivatedRoute).queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+            if (ConsoleAccessService.REFUSED_REASON === params.get('reason')) {
+                this.loading = false;
+                this.error   = LoginComponent.NO_CONSOLE_ACCESS;
+            }
+        });
+    }
 
     submit(): void {
         if (!this.identifier || !this.password) return;

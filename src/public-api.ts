@@ -51,6 +51,7 @@ export * from './auth/login/login.component';
 
 // -- Boot + configuration -----------------------------------------------------
 export * from './bootstrap/app-init.service';
+export * from './bootstrap/console-access.service';
 export * from './config/config.service';
 export * from './state/app-config.state';
 

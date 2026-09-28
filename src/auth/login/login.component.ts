@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, NgZone, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
@@ -21,6 +21,7 @@ export class LoginComponent {
 
     private readonly store  = inject(Store);
     private readonly router = inject(Router);
+    private readonly zone   = inject(NgZone);
 
     /** Shown when the guard signed an account out because the console is not granted to it. */
     static readonly NO_CONSOLE_ACCESS = 'This account has no access to the console.';
@@ -42,8 +43,13 @@ export class LoginComponent {
         this.loading = true;
         this.error = null;
 
+        // !! The store answers a dispatch OUTSIDE Angular's zone. Measured in a browser on the
+        // served admin (2026-09-28): after a wrong password, and after a sign-in the console
+        // refused, the page kept saying "Signing in..." -- the message was set and never
+        // rendered -- until the person typed a character. So both answers, and the navigation
+        // the first one starts, run back inside the zone.
         this.store.dispatch(new Login(this.identifier, this.password)).subscribe({
-            next: () => {
+            next: () => this.zone.run(() => {
                 // A rejected navigation used to vanish: nothing resets `loading`
                 // on the success path, because the page is expected to go
                 // away. If it does not, the form spins for ever with no reason
@@ -52,11 +58,11 @@ export class LoginComponent {
                     this.loading = false;
                     this.error = 'Signed in, but the admin could not be opened. Please reload.';
                 });
-            },
-            error: (err) => {
+            }),
+            error: (err) => this.zone.run(() => {
                 this.loading = false;
                 this.error = err?.error?.detail ?? err?.error?.message ?? err?.message ?? 'Invalid credentials. Please try again.';
-            },
+            }),
         });
     }
 }

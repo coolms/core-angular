@@ -84,6 +84,24 @@ describe('ConsoleAccessService', () => {
         httpMock.expectNone(ConsoleAccessService.URL);
     });
 
+    it('asks the old address only when a server older than 2026-10-06 answers 404 at the new one', async () => {
+        const answer = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 404, statusText: 'Not Found' });
+        httpMock.expectOne(ConsoleAccessService.LEGACY_URL).flush({ manifest: { apiBase: '/api/v1' } });
+
+        expect(await answer).toBe('granted');
+        expect(dispatched.length).toBe(1);
+    });
+
+    it('is still refused by an older server: a 404 at the new address, then a 403 at the old one', async () => {
+        const answer = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 404, statusText: 'Not Found' });
+        httpMock.expectOne(ConsoleAccessService.LEGACY_URL).flush({}, { status: 403, statusText: 'Forbidden' });
+
+        expect(await answer).toBe('refused');
+        expect(dispatched.length).toBe(0);
+    });
+
     it('is refused on 403, and keeps the refusal for this sign-in', async () => {
         const answer = service.ensure();
         httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 403, statusText: 'Forbidden' });

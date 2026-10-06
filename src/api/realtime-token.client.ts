@@ -58,6 +58,13 @@ export interface CentrifugoSubscriptionTokenDto {
  * set, before the guard's answer is in. So the token waits for the console's answer (the
  * guard's own request, not a second one) and a refused sign-in gets none: no request, no
  * socket. A failure to ask is not a refusal, as at the guard.
+ *
+ * Since 2026-10-06 the connection token is every signed-in account's (Dmitry, (c), option 2:
+ * "The connection token only opens a socket; each channel is authorized when it is subscribed
+ * to"), and a current server answers the admin manifest to every signed-in account, so no
+ * sign-in is refused and every one gets its token; each subscription is then decided by its
+ * channel. The wait stays for a server from before that, where a refused sign-in still opens
+ * no socket.
  */
 @Injectable({ providedIn: 'root' })
 export class RealtimeTokenClient {

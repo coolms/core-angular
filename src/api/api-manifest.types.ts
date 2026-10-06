@@ -312,8 +312,10 @@ export interface ApiManifest {
 }
 
 /**
- * GET /api/v1/console/manifest -- the console's endpoint map, answered to an account the
- * console is granted to and refused (403) to any other. Read once signed in.
+ * GET /api/v1/admin/manifest -- the admin's endpoint map, answered to every signed-in account
+ * since 2026-10-06 (no host groups: each call it names is decided by its own route). A server
+ * from before that answers at /api/v1/console/manifest, to the console group only. Read once
+ * signed in.
  */
 export interface ConsoleManifestResponse {
     readonly manifest: ApiManifest;

@@ -23,9 +23,9 @@ export interface ElevationState {
     lifetimeCeilingSeconds: number;
     /** Whether the CURRENT elevation was confirmed by a second factor; absent or null when not elevated. */
     factorConfirmed?: boolean | null;
-    /** Whether a grant made now must carry a code from the admin authenticator. */
+    /** Whether a grant made now must carry a code from the person's own authenticator. */
     mfaRequired: boolean;
-    /** What the prompt shows before asking; two of the codes mean the installation cannot elevate yet. */
+    /** What the prompt shows before asking; two of the codes mean this account cannot elevate yet. */
     warnings: ElevationWarning[];
 }
 
@@ -48,8 +48,9 @@ export interface ElevationEnded {
 }
 
 /**
- * `elevation.password_not_set` and `elevation.factor_missing` mean the
- * installation cannot elevate and the message names the server command;
+ * `elevation.password_not_set` and `elevation.factor_missing` mean this
+ * account cannot elevate (it has no password, or no confirmed factor, of its
+ * own) and the message says which;
  * `elevation.mfa_off` is the recommendation carried while the switch is off.
  */
 export interface ElevationWarning {

@@ -185,10 +185,11 @@ export class ElevationService {
     }
 
     /**
-     * Elevate with the admin password and, when the switch is on, a code from
-     * the admin authenticator. Errors are the dialog's to branch on: 403 wrong
-     * password or wrong / replayed code, 428 a code is required, 409 the
-     * installation cannot elevate yet, 429 throttled. They pass through
+     * Elevate with the person's own password and, when the switch is on, a
+     * code from their own authenticator. Errors are the dialog's to branch on:
+     * 403 not a member of the admin group, wrong password, or wrong / replayed
+     * code, 428 a code is required, 409 this account cannot elevate yet, 429
+     * throttled. They pass through
      * untouched, and never open the prompt (BYPASS_ELEVATION).
      */
     elevate(password: string, code?: string): Observable<ElevationState> {

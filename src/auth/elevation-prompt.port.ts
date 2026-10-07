@@ -7,8 +7,8 @@ import type { ElevationState } from './elevation.types';
  *
  * `state` is the server's answer at the moment of asking -- `ended.reason` is
  * rendered first (a person asked for a password again after F5
- * with no explanation reads it as a fault), `warnings` may say the
- * installation cannot elevate yet, `mfaRequired` decides whether a code field
+ * with no explanation reads it as a fault), `warnings` may say this
+ * account cannot elevate yet, `mfaRequired` decides whether a code field
  * shows from the start.
  *
  * `refusal` is the server's own sentence for the action that was refused

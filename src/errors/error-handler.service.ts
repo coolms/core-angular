@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ELEVATION_REQUIRED_HEADER } from '../auth/elevation.service';
+import { isElevationRefusal } from '../auth/elevation.service';
 
 /** The refusal text the server's framework writes when no one wrote a better one. */
 const FRAMEWORK_REFUSAL = /^\s*access denied\.?\s*$/i;
@@ -22,7 +22,7 @@ export class ErrorHandlerService {
             return err instanceof Error ? err.message : 'An unexpected error occurred.';
         }
 
-        const elevationRefusal = err.status === 403 && !!err.headers?.get(ELEVATION_REQUIRED_HEADER);
+        const elevationRefusal = isElevationRefusal(err);
         const body = err.error as Record<string, unknown> | null;
         if (body && typeof body === 'object') {
             const detail = body['detail'] ?? body['hydra:description'] ?? body['message'];

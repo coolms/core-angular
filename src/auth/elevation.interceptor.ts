@@ -1,49 +1,61 @@
 import { inject } from '@angular/core';
-import { HttpErrorResponse, type HttpInterceptorFn } from '@angular/common/http';
-import { catchError, switchMap, throwError } from 'rxjs';
-import { BYPASS_ELEVATION, ELEVATION_REQUIRED_HEADER, ElevationService } from './elevation.service';
+import { type HttpInterceptorFn } from '@angular/common/http';
+import { tap } from 'rxjs';
+import { ELEVATION_NOTICE } from './elevation-prompt.port';
+import { BACKGROUND_REQUEST, BYPASS_ELEVATION, ElevationService, isElevationRefusal } from './elevation.service';
 import { ErrorHandlerService } from '../errors/error-handler.service';
 
+/** Methods that read. A read is made by a page as it loads or by a poll, never as an action. */
+const READS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 /**
- * The elevation prompt hangs off the 403, not off the listing's flags
- * (the elevation client requirement, point 1) -- and off the 403 that SAYS it
- * was refused for want of elevation: the server stamps `X-Elevation-Required`
- * with the gate's name where its gate refused a member who has not elevated.
- * Any route of this API can carry it -- the VFS, a media asset's
- * permissions, a document template, an account's deletion -- so nothing here
- * lists URLs; the list that stood here lagged the server by every route whose
- * refusal came from the VFS permission service under another module's path.
+ * A refusal for want of elevation is a 403 the server stamps `X-Elevation-Required`
+ * where its gate refused a member who has not elevated ({@link isElevationRefusal}).
+ * This interceptor never opens the elevation prompt. The prompt opens only when a
+ * person asks for it: an Elevate button, or an action whose control already knows it
+ * needs elevation and offers it ({@link ElevationService.offerFor}).
  *
- * On the stamp: ask the server whether this session is elevated, and only when
- * it is NOT open the prompt; on a grant send the refused request again, once.
- * A 403 without the stamp is a refusal for another reason and is handed back
- * as it came; so are a 403 while elevated, a declined prompt, and an
- * installation that cannot elevate -- nothing here swallows a refusal. A
- * stamped 403 from anywhere but this API is ignored: the header is the
- * server's word, and only this server's counts.
+ * What it does with a stamped 403:
+ * - On a write a person made (POST, PUT, PATCH, DELETE without
+ *   {@link BACKGROUND_REQUEST}): tells {@link ELEVATION_NOTICE}, which shows the
+ *   refusal with an Elevate button. The request is not held and not repeated; the
+ *   caller receives the 403 at once, and after elevating the person repeats the action.
+ * - On a read: nothing. Reads are what a page makes as it loads and what polls make in
+ *   the background, and the page shows its own state for a refused one -- an inline
+ *   "needs an elevated session" with an Elevate button, or the feature hidden.
+ * - On a background request: nothing. Nobody is waiting on it.
  *
- * Order in the chain: BEFORE the auth interceptor, so the retry re-enters it
- * and carries the token current at that moment (the prompt may have outlived
- * a refresh). The elevation endpoint's own calls carry BYPASS_ELEVATION: a
- * wrong password is a 403 and is not a refused action.
+ * Until 2026-10-08 any stamped 403 opened the prompt, so the setup reads of almost every
+ * console page, and a realtime token at every load, opened it for an administrator who
+ * had not elevated: 13 of 15 pages on a menu click, 15 of 15 on a reload (measured).
+ *
+ * The elevation endpoint's own calls carry {@link BYPASS_ELEVATION}: a wrong password is a
+ * 403 and is not a refused action. A stamped 403 from anywhere but this API is ignored:
+ * the header is the server's word, and only this server's counts.
  */
 export const elevationInterceptor: HttpInterceptorFn = (req, next) => {
     const elevation = inject(ElevationService);
-    const errors    = inject(ErrorHandlerService);
 
-    if (req.context.get(BYPASS_ELEVATION) || !elevation.isThisApi(req.url)) {
+    if (req.context.get(BYPASS_ELEVATION)
+        || req.context.get(BACKGROUND_REQUEST)
+        || READS.has(req.method.toUpperCase())
+        || !elevation.isThisApi(req.url)) {
         return next(req);
     }
 
-    return next(req).pipe(
-        catchError((err: unknown) => {
-            if (!(err instanceof HttpErrorResponse) || err.status !== 403 || !err.headers.get(ELEVATION_REQUIRED_HEADER)) {
-                return throwError(() => err);
-            }
+    const notice = inject(ELEVATION_NOTICE, { optional: true });
+    if (!notice) {
+        return next(req);
+    }
+    const errors = inject(ErrorHandlerService);
 
-            return elevation.offerFor(errors.humanize(err)).pipe(
-                switchMap(granted => granted ? next(req) : throwError(() => err)),
-            );
+    return next(req).pipe(
+        tap({
+            error: (err: unknown) => {
+                if (isElevationRefusal(err)) {
+                    notice.refused(errors.humanize(err));
+                }
+            },
         }),
     );
 };

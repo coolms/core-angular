@@ -1,11 +1,15 @@
 import { Injectable, Injector, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { defer, switchMap, throwError, type Observable } from 'rxjs';
 
 import { ConsoleAccessService } from '../bootstrap/console-access.service';
 import { AppConfigState } from '../state/app-config.state';
 import type { ApiManifest } from './api-manifest.types';
+import { BACKGROUND_REQUEST } from '../auth/elevation.service';
+
+/** No person asks for a realtime token: a refusal is the channel's answer, never a prompt or a notice. */
+const BACKGROUND = { context: new HttpContext().set(BACKGROUND_REQUEST, true) };
 
 /**
  * Response of `POST /centrifugo/connection-token`: the JWT the realtime SDK
@@ -87,12 +91,12 @@ export class RealtimeTokenClient {
         return defer(() => this.injector.get(ConsoleAccessService).ensure()).pipe(
             switchMap(access => 'refused' === access
                 ? throwError(() => new Error(RealtimeTokenClient.REFUSED))
-                : this.http.post<CentrifugoConnectionTokenDto>(this.manifest.apiBase + '/centrifugo/connection-token', {})),
+                : this.http.post<CentrifugoConnectionTokenDto>(this.manifest.apiBase + '/centrifugo/connection-token', {}, BACKGROUND)),
         );
     }
 
     subscriptionToken(channel: string): Observable<CentrifugoSubscriptionTokenDto> {
         return this.http.post<CentrifugoSubscriptionTokenDto>(
-            this.manifest.apiBase + '/centrifugo/subscription-token', { channel });
+            this.manifest.apiBase + '/centrifugo/subscription-token', { channel }, BACKGROUND);
     }
 }

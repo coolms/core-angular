@@ -1,62 +1,54 @@
 import { TestBed } from '@angular/core/testing';
 import {
-    HttpClient, HttpContext, type HttpInterceptorFn, provideHttpClient, withInterceptors,
+    HttpClient, HttpContext, HttpErrorResponse, type HttpInterceptorFn, provideHttpClient, withInterceptors,
 } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Store } from '@ngxs/store';
-import { Subject } from 'rxjs';
+import { type Observable, of } from 'rxjs';
 import { elevationInterceptor } from './elevation.interceptor';
-import { BYPASS_ELEVATION, ElevationService } from './elevation.service';
-import { ELEVATION_PROMPT, type ElevationPromptRequest } from './elevation-prompt.port';
-import type { ElevationState } from './elevation.types';
+import { BACKGROUND_REQUEST, BYPASS_ELEVATION } from './elevation.service';
+import { ELEVATION_NOTICE, ELEVATION_PROMPT, type ElevationPromptRequest } from './elevation-prompt.port';
 
 /**
- * The elevation client requirement, point 1: the prompt hangs off the 403.
+ * The elevation prompt opens only when a person asks for it: a request made on page load or in the
+ * background that gets a 403 never opens it.
  *
  * Coverage:
- *   1. A 403 on a gated URL asks the state endpoint; unelevated -> the prompt
- *      opens with the server's refusal sentence; a grant -> the request is
- *      sent again and the caller sees the retry's answer.
- *   2. Declined -> the caller gets the ORIGINAL 403, and no retry is sent.
- *   3. Elevated already -> no prompt, the 403 is a real refusal.
- *   4. Not a 403 (404) -> untouched, no state read.
- *   5. Not stamped (a 403 for another reason) -> untouched; stamped on a
- *      non-VFS route (a media asset's permissions) -> the prompt; stamped
- *      from another origin -> untouched.
- *   6. The elevation endpoint's own 403 (wrong password) is not a refused
- *      action: BYPASS_ELEVATION passes it through.
- *   7. A burst of refusals opens ONE prompt; every caller retries on the one
- *      grant.
- *   8. No port bound -> a 403 stays a 403 (the kit works without a panel).
+ *   1. A stamped 403 on a read -- what a page makes as it loads, what a poll makes -- opens nothing and
+ *      tells nothing; the caller receives the 403 and shows its own state.
+ *   2. The same on a background write (a realtime token, a preferences sync).
+ *   3. A stamped 403 on a write a person made tells the notice once, with the server's sentence; it
+ *      never opens the prompt, never reads the elevation state, and never repeats the request. The
+ *      caller receives the 403 at once.
+ *   4. A 403 without the stamp, a stamp from another origin, and the elevation endpoint's own 403
+ *      tell nothing.
+ *   5. With no notice bound, a refusal is only a 403.
+ * In every case the prompt port, bound throughout, is opened zero times.
  */
 describe('elevationInterceptor', () => {
     let http: HttpClient;
     let httpMock: HttpTestingController;
     let opened: ElevationPromptRequest[];
-    let answer: Subject<boolean>;
+    let told: string[];
 
     const ELEVATION = '/api/v1/auth/elevation';
     const manifest  = { apiBase: '/api/v1', identity: { elevationUrl: ELEVATION } };
 
-    const unelevated: ElevationState = {
-        elevated: false, ended: { reason: 'closed', at: '2026-09-14T11:32:00+03:00' },
-        lifetimeSeconds: 900, lifetimeCeilingSeconds: 3600, mfaRequired: false, warnings: [],
-    };
-    const elevated: ElevationState = {
-        ...unelevated, elevated: true, expiresAt: '2099-01-01T00:00:00+00:00', ended: { reason: 'never', at: null },
-    };
-
-    const setup = (withPort = true): void => {
+    const setup = (withNotice = true): void => {
         opened = [];
-        answer = new Subject<boolean>();
+        told   = [];
         TestBed.configureTestingModule({
             providers: [
                 provideHttpClient(withInterceptors([elevationInterceptor as HttpInterceptorFn])),
                 provideHttpClientTesting(),
                 { provide: Store, useValue: { selectSnapshot: () => manifest } },
-                ...(withPort ? [{
+                {
                     provide: ELEVATION_PROMPT,
-                    useValue: { open: (r: ElevationPromptRequest) => { opened.push(r); return answer.asObservable(); } },
+                    useValue: { open: (r: ElevationPromptRequest) => { opened.push(r); return of(true); } },
+                },
+                ...(withNotice ? [{
+                    provide: ELEVATION_NOTICE,
+                    useValue: { refused: (refusal: string) => { told.push(refusal); } },
                 }] : []),
             ],
         });
@@ -64,147 +56,101 @@ describe('elevationInterceptor', () => {
         httpMock = TestBed.inject(HttpTestingController);
     };
 
-    afterEach(() => httpMock.verify());
+    afterEach(() => {
+        // Not one refusal, of any kind, opened the prompt, and nothing asked for the elevation state.
+        expect(opened.length).toBe(0);
+        httpMock.expectNone(ELEVATION);
+        httpMock.verify();
+    });
 
     /** A 403 the server stamped: refused by the named gate for want of elevation. */
     const refuse = (url: string, detail = "Permission denied: cannot write '/docs/a.md'", gate = 'vfs.permission'): void => {
         httpMock.expectOne(url).flush({ detail }, { status: 403, statusText: 'Forbidden', headers: { 'X-Elevation-Required': gate } });
     };
 
-    /** A 403 refused for another reason: no stamp. */
-    const refuseUnstamped = (url: string, detail = 'You may not read this.'): void => {
-        httpMock.expectOne(url).flush({ detail }, { status: 403, statusText: 'Forbidden' });
+    /** Subscribes, and holds the status of the error the caller receives. */
+    const errorOf = (source: Observable<unknown>): { status?: number } => {
+        const received: { status?: number } = {};
+        source.subscribe({ error: (e: HttpErrorResponse) => { received.status = e.status; } });
+        return received;
     };
 
-    it('opens the prompt on a 403 while unelevated, and retries the action on a grant', () => {
+    it('opens nothing and tells nothing when a page-load read is refused (a Mail reload asks for workflow definitions)', () => {
         setup();
-        const results: unknown[] = [];
-        http.delete('/api/v1/vfs/nodes?path=/docs/a.md').subscribe({ next: r => results.push(r), error: e => results.push(e) });
+        const error = errorOf(http.get('/api/v1/definitions?module=workflow&itemsPerPage=200'));
+
+        refuse('/api/v1/definitions?module=workflow&itemsPerPage=200', 'Access Denied.', 'identity.administrator_role');
+
+        expect(told).toEqual([]);
+        expect(error.status).toBe(403);
+    });
+
+    it('opens nothing and tells nothing when a background write is refused (a realtime subscription token)', () => {
+        setup();
+        const background = { context: new HttpContext().set(BACKGROUND_REQUEST, true) };
+        const error = errorOf(http.post('/api/v1/centrifugo/subscription-token', { channel: 'x' }, background));
+
+        refuse('/api/v1/centrifugo/subscription-token', 'Access Denied.', 'identity.administrator_role');
+
+        expect(told).toEqual([]);
+        expect(error.status).toBe(403);
+    });
+
+    it('tells the notice once, with the server\'s sentence, when a write a person made is refused, and does not repeat it', () => {
+        setup();
+        const error = errorOf(http.delete('/api/v1/vfs/nodes?path=/docs/a.md'));
 
         refuse('/api/v1/vfs/nodes?path=/docs/a.md');
-        httpMock.expectOne(ELEVATION).flush(unelevated);
 
-        expect(opened.length).toBe(1);
-        expect(opened[0].refusal).toBe("Permission denied: cannot write '/docs/a.md'");
-        expect(opened[0].state.ended.reason).toBe('closed');
-        expect(results.length).toBe(0);
-
-        answer.next(true); answer.complete();
-        httpMock.expectOne('/api/v1/vfs/nodes?path=/docs/a.md').flush({ ok: true });
-        expect(results).toEqual([{ ok: true }]);
+        expect(told).toEqual(["Permission denied: cannot write '/docs/a.md'"]);
+        expect(error.status).toBe(403);
+        httpMock.expectNone('/api/v1/vfs/nodes?path=/docs/a.md');
     });
 
-    it('hands the ORIGINAL 403 back when the prompt is declined, and sends no retry', () => {
+    it('tells the notice in readable words when the server wrote only the framework\'s refusal', () => {
         setup();
-        let error: unknown = null;
-        http.post('/api/v1/vfs/directories', { path: '/docs/new' }).subscribe({ error: e => { error = e; } });
+        errorOf(http.put('/api/v1/themes/site', {}));
 
-        refuse('/api/v1/vfs/directories', 'Permission denied: cannot create');
-        httpMock.expectOne(ELEVATION).flush(unelevated);
-        answer.next(false); answer.complete();
+        refuse('/api/v1/themes/site', 'Access Denied.', 'identity.administrator_role');
 
-        expect((error as { status: number }).status).toBe(403);
-        expect((error as { error: { detail: string } }).error.detail).toBe('Permission denied: cannot create');
-        httpMock.expectNone('/api/v1/vfs/directories');
+        expect(told).toEqual(['This needs an elevated session.']);
     });
 
-    it('does not prompt when the server says the session is elevated already', () => {
+    it('tells nothing for a 403 the server did not stamp', () => {
         setup();
-        let error: unknown = null;
-        http.put('/api/v1/vfs/files/content?path=/x', 'body').subscribe({ error: e => { error = e; } });
+        const error = errorOf(http.post('/api/v1/vfs/directories', { path: '/docs/new' }));
 
-        refuse('/api/v1/vfs/files/content?path=/x');
-        httpMock.expectOne(ELEVATION).flush(elevated);
+        httpMock.expectOne('/api/v1/vfs/directories').flush({ detail: 'You may not.' }, { status: 403, statusText: 'Forbidden' });
 
-        expect(opened.length).toBe(0);
-        expect((error as { status: number }).status).toBe(403);
+        expect(told).toEqual([]);
+        expect(error.status).toBe(403);
     });
 
-    it('leaves a non-403 alone and reads no state', () => {
+    it('tells nothing for a stamp from another origin', () => {
         setup();
-        let error: unknown = null;
-        http.get('/api/v1/vfs/directories/list?path=/gone').subscribe({ error: e => { error = e; } });
+        errorOf(http.post('https://elsewhere.example/api/v1/x', {}));
 
-        httpMock.expectOne('/api/v1/vfs/directories/list?path=/gone').flush({}, { status: 404, statusText: 'Not Found' });
-        httpMock.expectNone(ELEVATION);
-        expect(opened.length).toBe(0);
-        expect((error as { status: number }).status).toBe(404);
+        refuse('https://elsewhere.example/api/v1/x');
+
+        expect(told).toEqual([]);
     });
 
-    it('leaves a 403 without the stamp alone: refused for another reason', () => {
+    it('tells nothing for the elevation endpoint\'s own 403 (a wrong password)', () => {
         setup();
-        let error: unknown = null;
-        http.get('/api/v1/content/pages').subscribe({ error: e => { error = e; } });
+        const bypass = { context: new HttpContext().set(BYPASS_ELEVATION, true) };
+        errorOf(http.post('/api/v1/auth/elevation-grant', { password: 'x' }, bypass));
 
-        refuseUnstamped('/api/v1/content/pages');
-        httpMock.expectNone(ELEVATION);
-        expect(opened.length).toBe(0);
-        expect((error as { status: number }).status).toBe(403);
+        refuse('/api/v1/auth/elevation-grant', 'Wrong password.');
+
+        expect(told).toEqual([]);
     });
 
-    it('prompts on a stamped 403 from ANY route of this API, not only the VFS', () => {
-        setup();
-        let result: unknown = null;
-        http.patch('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions', { mode: '0644' }).subscribe(r => { result = r; });
-
-        refuse('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions', 'Permission denied: cannot chmod', 'vfs.chmod');
-        httpMock.expectOne(ELEVATION).flush(unelevated);
-        expect(opened.length).toBe(1);
-        expect(opened[0].refusal).toContain('chmod');
-
-        answer.next(true);
-        httpMock.expectOne('/api/v1/media/01a0aff1-1a3e-7d26-a49b-80b1d6465a28/permissions').flush({ ok: true });
-        expect(result).toEqual({ ok: true });
-    });
-
-    it('ignores a stamped 403 from another origin: only this API\'s word counts', () => {
-        setup();
-        let error: unknown = null;
-        http.get('https://elsewhere.example/api/v1/vfs/nodes').subscribe({ error: e => { error = e; } });
-
-        refuse('https://elsewhere.example/api/v1/vfs/nodes');
-        httpMock.expectNone(ELEVATION);
-        expect(opened.length).toBe(0);
-        expect((error as { status: number }).status).toBe(403);
-    });
-
-    it('passes the elevation endpoint\'s own 403 (wrong password) through untouched', () => {
-        setup();
-        let error: unknown = null;
-        const context = new HttpContext().set(BYPASS_ELEVATION, true);
-        http.post(ELEVATION, { password: 'nope' }, { context }).subscribe({ error: e => { error = e; } });
-
-        refuse(ELEVATION, 'Wrong password');
-        expect(opened.length).toBe(0);
-        expect((error as { status: number }).status).toBe(403);
-    });
-
-    it('opens ONE prompt for a burst of refusals and retries every one on the grant', () => {
-        setup();
-        const done: string[] = [];
-        for (const p of ['/a', '/b', '/c']) {
-            http.delete(`/api/v1/vfs/nodes?path=${p}`).subscribe({ next: () => done.push(p) });
-        }
-        for (const p of ['/a', '/b', '/c']) refuse(`/api/v1/vfs/nodes?path=${p}`);
-
-        // Each refusal asks the state endpoint (the answer is what decides),
-        // but the prompt is shared: one dialog, three callers waiting on it.
-        httpMock.match(ELEVATION).forEach(r => r.flush(unelevated));
-        expect(opened.length).toBe(1);
-
-        answer.next(true); answer.complete();
-        for (const p of ['/a', '/b', '/c']) httpMock.expectOne(`/api/v1/vfs/nodes?path=${p}`).flush({});
-        expect(done).toEqual(['/a', '/b', '/c']);
-    });
-
-    it('with no port bound, a 403 stays a 403', () => {
+    it('leaves a refusal a plain 403 when no notice is bound', () => {
         setup(false);
-        let error: unknown = null;
-        http.delete('/api/v1/vfs/nodes?path=/a').subscribe({ error: e => { error = e; } });
+        const error = errorOf(http.delete('/api/v1/vfs/nodes?path=/docs/b.md'));
 
-        refuse('/api/v1/vfs/nodes?path=/a');
-        httpMock.expectNone(ELEVATION);
-        expect((error as { status: number }).status).toBe(403);
-        expect(TestBed.inject(ElevationService).elevated()).toBe(false);
+        refuse('/api/v1/vfs/nodes?path=/docs/b.md');
+
+        expect(error.status).toBe(403);
     });
 });

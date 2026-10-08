@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { map, type Observable, shareReplay } from 'rxjs';
+import { catchError, map, type Observable, shareReplay, throwError } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
 
 /**
@@ -113,7 +113,8 @@ export interface DatagridConfig  { [key: string]: unknown; }
  * Fetches config YAMLs (served as JSON) from GET /api/v1/config/{type}/{id}.
  *
  * Responses are cached for the lifetime of the service (Map + shareReplay(1))
- * so repeated calls never re-fetch the same resource.
+ * so repeated calls never re-fetch the same resource. A failed read is dropped
+ * from the cache, so the next call asks the server again.
  *
  * configBase is read from the API manifest (manifest.configBase) and falls
  * back to '/api/v1/config' when the manifest is not yet loaded.
@@ -141,6 +142,12 @@ export class ConfigService {
             // Unwrap so callers always receive the config payload directly.
             const obs  = this.http.get<{ data?: T } & T>(`${base}/${type}/${id}`).pipe(
                 map(r => (r.data ?? r) as T),
+                // A failed read is not kept: a page that was refused for want of elevation reads
+                // again once the person elevates, and must reach the server, not this cache.
+                catchError((err: unknown) => {
+                    this.cache.delete(key);
+                    return throwError(() => err);
+                }),
                 shareReplay(1),
             );
             this.cache.set(key, obs);

@@ -1,5 +1,5 @@
 import { DestroyRef, inject, Injectable, signal, untracked } from '@angular/core';
-import { HttpClient, HttpContext, HttpContextToken } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpContextToken, HttpErrorResponse } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { defer, finalize, type Observable, of, shareReplay, Subject, switchMap, tap } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
@@ -66,6 +66,23 @@ const RECONCILE_MIN_INTERVAL_MS = 2_000;
  * path (media, document and word templates, content distribution).
  */
 export const ELEVATION_REQUIRED_HEADER = 'X-Elevation-Required';
+
+/**
+ * Set on a request no person asked for: a realtime token, a preferences sync, a
+ * poll. Its refusal is never announced -- not by a dialog and not by a notice --
+ * because nobody is waiting on it and nobody can act on it. The caller still
+ * receives the 403 and decides what its own state shows.
+ */
+export const BACKGROUND_REQUEST = new HttpContextToken<boolean>(() => false);
+
+/**
+ * Whether a failed request was refused for want of elevation: a 403 carrying
+ * the server's stamp. The one test every reader of a refusal uses -- the
+ * interceptor, a page's inline state, the error text -- so they cannot disagree.
+ */
+export function isElevationRefusal(err: unknown): boolean {
+    return err instanceof HttpErrorResponse && err.status === 403 && !!err.headers.get(ELEVATION_REQUIRED_HEADER);
+}
 
 @Injectable({ providedIn: 'root' })
 export class ElevationService {
@@ -215,10 +232,12 @@ export class ElevationService {
     }
 
     /**
-     * What the interceptor calls on a 403: ask the server whether this session
-     * is elevated, and only when it is not, offer the prompt. A 403 while
-     * elevated is a real refusal -- elevation would not change it -- and is
-     * handed back as such (false, no prompt).
+     * What a person's explicit request for elevation calls -- an Elevate button,
+     * or a control that already knows its action needs elevation: ask the
+     * server whether this session is elevated, and only when it is not, open
+     * the prompt. Nothing calls it on a response by itself (the interceptor
+     * only tells {@link ELEVATION_NOTICE}). Elevated already is false, no
+     * prompt: elevation would change nothing.
      */
     offerFor(refusal?: string): Observable<boolean> {
         if (!this.available || !this.prompt) return of(false);

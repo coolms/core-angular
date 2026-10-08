@@ -1,9 +1,10 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { Subject, debounceTime } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
+import { BACKGROUND_REQUEST } from '../auth/elevation.service';
 import { type DataGridPreference } from './user-preferences.types';
 
 /**
@@ -184,6 +185,8 @@ export class UserPreferencesService {
 
         this.http.patch(url, { uiPrefs: prefs }, {
             headers: { 'Content-Type': 'application/merge-patch+json' },
+            // Sent on every navigation, by no one's action.
+            context: new HttpContext().set(BACKGROUND_REQUEST, true),
         }).subscribe({
             error: err => console.warn('Preferences sync failed:', err),
         });

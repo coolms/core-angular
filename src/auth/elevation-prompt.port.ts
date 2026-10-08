@@ -43,3 +43,25 @@ export interface ElevationPromptPort {
 export const ELEVATION_PROMPT = new InjectionToken<ElevationPromptPort>(
     'coolms.elevation-prompt',
 );
+
+/**
+ * Told when an action a person took was refused for want of elevation: a
+ * write (not a read, not a background request) answered by a stamped 403.
+ *
+ * It must not open the prompt. The prompt opens only when the person asks for
+ * it -- the application shows the refusal and offers elevation as something to
+ * click (a notice with an Elevate button), and the click is what calls
+ * {@link ElevationService.offerFor}. A refused action is not repeated by
+ * itself after a grant: the person repeats it.
+ *
+ * `refusal` is the server's sentence for the refused action, already made
+ * readable by the error service.
+ */
+export interface ElevationNoticePort {
+    refused(refusal: string): void;
+}
+
+/** Optional, like {@link ELEVATION_PROMPT}: with nothing bound, a refusal is only a 403. */
+export const ELEVATION_NOTICE = new InjectionToken<ElevationNoticePort>(
+    'coolms.elevation-notice',
+);

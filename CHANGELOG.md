@@ -9,6 +9,52 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+## 2.0.0-alpha.5 - 2026-10-09
+
+### Changed
+
+- **The elevation prompt opens only when a person asks for it.** A 403 that
+  the server stamps `X-Elevation-Required` no longer opens the prompt by
+  itself. `elevationInterceptor` now:
+  - leaves a refused read (`GET`, `HEAD`, `OPTIONS`: a page loading, a poll)
+    to its caller, which shows its own state;
+  - leaves a refused background request alone (see `BACKGROUND_REQUEST`);
+  - tells `ELEVATION_NOTICE` when a write a person made is refused, and hands
+    the 403 back at once. The application shows the refusal with an Elevate
+    button, and only that click opens the prompt (`ElevationService.offerFor`).
+    The refused action is not repeated by itself.
+- `ErrorHandlerService.humanize()` says "This needs an elevated session." for
+  a stamped refusal, and "You don't have access to this." in place of the
+  framework's bare "Access Denied." for any other 403. A sentence the server
+  wrote for the refused action is kept.
+- `ConfigService` no longer caches a failed read, so a page that was refused
+  reads again after the person elevates.
+- **The console opens for an account the server grants it to.** Once the
+  session is settled, the auth guard asks for the admin's endpoint map: a 200
+  merges it into the app config, and a 403 signs this sign-in out (on the
+  server too) and returns to the sign-in page, which says the account has no
+  access to the console. A failure to ask is not an answer: the console opens,
+  and each of its requests is still decided by the server.
+  - The map is read at `/api/v1/admin/manifest`, and at the older
+    `/api/v1/console/manifest` only when the server answers 404 there.
+  - An answer is kept only for the sign-in that asked. Nothing is asked while
+    nobody is signed in.
+  - A module route waits for the map when someone is signed in.
+  - The realtime connection opens after this check, and a refused sign-in
+    opens none.
+- The sign-in page shows its answer (a wrong password, or the console's
+  refusal) as soon as it arrives, without waiting for the person to type.
+
+### Added
+
+- `BACKGROUND_REQUEST`: an `HttpContextToken` marking a request no person
+  made. The realtime connection and subscription tokens and the preferences
+  sync carry it.
+- `ELEVATION_NOTICE` and `ElevationNoticePort`: how an application is told
+  that a person's write was refused for want of elevation.
+- `isElevationRefusal(err)`: the one test for a stamped 403.
+- `ConsoleAccessService` in the public API.
+
 ## 2.0.0-alpha.4 - 2026-09-27
 
 ### Changed

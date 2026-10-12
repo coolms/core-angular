@@ -165,6 +165,27 @@ describe('NaviGraphService.loadAdminNav (the server answer, cached or asked agai
         expect(svc.adminNav()[0].access).toBe('allowed');
     });
 
+    it('keeps the tree it showed, and its cache, when a fresh re-ask fails', () => {
+        svc.loadAdminNav(URL).subscribe();
+        http.expectOne(URL).flush(flat('elevate'));
+        const shown = svc.adminNav();
+        expect(shown[0].access).toBe('elevate');
+
+        svc.loadAdminNav(URL, { fresh: true }).subscribe();
+        http.expectOne(URL).flush('down', { status: 502, statusText: 'Bad Gateway' });
+        expect(svc.adminNav()).withContext('the sidebar is not emptied').toEqual(shown);
+
+        svc.loadAdminNav(URL).subscribe();
+        http.expectNone(URL);
+        expect(svc.adminNav()).withContext('the cache still answers').toEqual(shown);
+    });
+
+    it('falls back to empty only for a tree that was never answered', () => {
+        svc.loadAdminNav(URL).subscribe();
+        http.expectOne(URL).flush('down', { status: 502, statusText: 'Bad Gateway' });
+        expect(svc.adminNav()).toEqual([]);
+    });
+
     it('reads an absent access as allowed, and only "elevate" as locked', () => {
         expect(naviAccessOf({})).toBe('allowed');
         expect(naviAccessOf({ access: 'allowed' })).toBe('allowed');

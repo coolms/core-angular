@@ -147,9 +147,7 @@ export class NaviGraphService {
      * Results are cached by URL for the lifetime of the service instance.
      */
     loadTree(url: string, fresh = false): Observable<NaviGraphNode[]> {
-        if (fresh) {
-            this.cache.delete(url);
-        } else if (this.cache.has(url)) {
+        if (!fresh && this.cache.has(url)) {
             return of(this.cache.get(url)!);
         }
 
@@ -165,7 +163,10 @@ export class NaviGraphService {
             }),
             catchError(err => {
                 console.error('[NaviGraph] loadTree failed for', url, this.errors.humanize(err));
-                return of([]);
+                // A re-ask that fails keeps what was last answered: an empty tree would hide every section and every
+                // tile that reads it until the next re-ask, and a reload to get them back would end an elevation.
+                // Only a tree never answered falls back to empty.
+                return of(this.cache.get(url) ?? []);
             }),
         );
     }

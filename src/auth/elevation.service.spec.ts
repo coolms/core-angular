@@ -79,6 +79,23 @@ describe('ElevationService', () => {
         expect(changes.length).toBe(1);
     });
 
+    it('says whether this account may elevate from the server answer alone, false when it does not say', () => {
+        setup();
+        expect(service.mayElevate()).toBe(false);
+
+        service.refresh().subscribe();
+        httpMock.expectOne(ELEVATION).flush({ ...base, mayElevate: true });
+        expect(service.mayElevate()).toBe(true);
+
+        service.refresh().subscribe();
+        httpMock.expectOne(ELEVATION).flush({ ...base, mayElevate: false });
+        expect(service.mayElevate()).toBe(false);
+
+        service.refresh().subscribe();
+        httpMock.expectOne(ELEVATION).flush(base);
+        expect(service.mayElevate()).toBe(false);
+    });
+
     it('sends the code only when given', () => {
         setup();
         service.elevate('secret', '123456').subscribe();

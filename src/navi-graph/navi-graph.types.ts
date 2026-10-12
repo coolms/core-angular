@@ -23,6 +23,15 @@ export interface NaviGraphMeta {
     readonly [key: string]:    unknown;
 }
 
+/**
+ * What the server says this account may do with a node, as it answered the graph:
+ *   'allowed' -- its own rights open it; shown as usual;
+ *   'elevate' -- a member of admin, not elevated, whose own rights refuse it and whom elevation would let in;
+ *                shown with a lock, and opening it asks for elevation first.
+ * A node anyone else may not open is not in the answer at all. Absent (an older server) reads as 'allowed'.
+ */
+export type NaviAccess = 'allowed' | 'elevate';
+
 /** Flat node as returned from GET /navi/trees/{slug}/graph */
 export interface NaviGraphNodeFlat {
     readonly id:        string;
@@ -33,6 +42,12 @@ export interface NaviGraphNodeFlat {
     readonly isActive:  boolean;
     readonly isVisible: boolean;
     readonly meta:      NaviGraphMeta;
+    readonly access?:   NaviAccess;
+}
+
+/** The node's access as the server answered it; 'allowed' when the server said nothing (an older server). */
+export function naviAccessOf(node: Pick<NaviGraphNodeFlat, 'access'>): NaviAccess {
+    return node.access === 'elevate' ? 'elevate' : 'allowed';
 }
 
 /** Same node enriched with resolved children after client-side tree build */

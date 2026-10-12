@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { NaviGraphService } from './navi-graph.service';
-import { NaviGraphNode } from './navi-graph.types';
+import { NaviGraphNode, naviAccessOf } from './navi-graph.types';
 import { ErrorHandlerService } from '../errors/error-handler.service';
 
 /**
@@ -114,5 +115,81 @@ describe('NaviGraphService.isVisible (showWhen evaluator — strict)', () => {
         });
         // mimeType missing -> first branch false; _surface present + matches -> second branch true.
         expect(svc.isVisible(node, { _surface: 'context' })).toBe(true);
+    });
+});
+
+/**
+ * The admin navigation is the server's answer per account AND per elevation state: a node is 'elevate' before a
+ * grant and 'allowed' after it. The service caches a tree by URL, so a change of elevation must be able to re-ask,
+ * and the node's access must reach the signal as the server sent it.
+ */
+describe('NaviGraphService.loadAdminNav (the server answer, cached or asked again)', () => {
+    const URL = '/api/v1/navi/trees/navi.admin/graph';
+    let svc: NaviGraphService;
+    let http: HttpTestingController;
+
+    const flat = (access?: 'allowed' | 'elevate'): Record<string, unknown> => ({
+        member: [{
+            id: 'b', path: '/backups', title: 'Backups', parentId: null, sortOrder: 0,
+            isActive: true, isVisible: true, meta: { resource: '/api/v1/backup' },
+            ...(access === undefined ? {} : { access }),
+        }],
+    });
+
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            providers: [
+                provideHttpClient(),
+                provideHttpClientTesting(),
+                { provide: Router, useValue: {} },
+                { provide: Store, useValue: { dispatch: () => ({ subscribe: () => undefined }) } },
+                { provide: ErrorHandlerService, useValue: { humanize: (e: unknown) => String(e) } },
+            ],
+        });
+        svc = TestBed.inject(NaviGraphService);
+        http = TestBed.inject(HttpTestingController);
+    });
+
+    afterEach(() => http.verify());
+
+    it('answers a second load from its cache, and asks the server again when told fresh', () => {
+        svc.loadAdminNav(URL).subscribe();
+        http.expectOne(URL).flush(flat('elevate'));
+        expect(svc.adminNav()[0].access).toBe('elevate');
+
+        svc.loadAdminNav(URL).subscribe();
+        http.expectNone(URL);
+
+        svc.loadAdminNav(URL, { fresh: true }).subscribe();
+        http.expectOne(URL).flush(flat('allowed'));
+        expect(svc.adminNav()[0].access).toBe('allowed');
+    });
+
+    it('keeps the tree it showed, and its cache, when a fresh re-ask fails', () => {
+        svc.loadAdminNav(URL).subscribe();
+        http.expectOne(URL).flush(flat('elevate'));
+        const shown = svc.adminNav();
+        expect(shown[0].access).toBe('elevate');
+
+        svc.loadAdminNav(URL, { fresh: true }).subscribe();
+        http.expectOne(URL).flush('down', { status: 502, statusText: 'Bad Gateway' });
+        expect(svc.adminNav()).withContext('the sidebar is not emptied').toEqual(shown);
+
+        svc.loadAdminNav(URL).subscribe();
+        http.expectNone(URL);
+        expect(svc.adminNav()).withContext('the cache still answers').toEqual(shown);
+    });
+
+    it('falls back to empty only for a tree that was never answered', () => {
+        svc.loadAdminNav(URL).subscribe();
+        http.expectOne(URL).flush('down', { status: 502, statusText: 'Bad Gateway' });
+        expect(svc.adminNav()).toEqual([]);
+    });
+
+    it('reads an absent access as allowed, and only "elevate" as locked', () => {
+        expect(naviAccessOf({})).toBe('allowed');
+        expect(naviAccessOf({ access: 'allowed' })).toBe('allowed');
+        expect(naviAccessOf({ access: 'elevate' })).toBe('elevate');
+        expect(naviAccessOf({ access: 'something-else' as 'allowed' })).toBe('allowed');
     });
 });

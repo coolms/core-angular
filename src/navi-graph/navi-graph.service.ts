@@ -32,8 +32,13 @@ export class NaviGraphService {
 
     // -------------------------------------------------------------------------
 
-    loadAdminNav(url: string): Observable<NaviGraphNode[]> {
-        return this.loadTree(url).pipe(
+    /**
+     * `fresh` asks the server again instead of answering from this service's cache: the answer is per account AND
+     * per elevation state (a node is 'elevate' before a grant and 'allowed' after it), so a change of elevation must
+     * re-ask, or a lock would outlive the grant -- or come back only after a reload.
+     */
+    loadAdminNav(url: string, options: { fresh?: boolean } = {}): Observable<NaviGraphNode[]> {
+        return this.loadTree(url, options.fresh ?? false).pipe(
             map(tree => { this.adminNav.set(tree); return tree; }),
         );
     }
@@ -141,8 +146,10 @@ export class NaviGraphService {
      * the legacy Hydra key (`hydra:member`).
      * Results are cached by URL for the lifetime of the service instance.
      */
-    loadTree(url: string): Observable<NaviGraphNode[]> {
-        if (this.cache.has(url)) {
+    loadTree(url: string, fresh = false): Observable<NaviGraphNode[]> {
+        if (fresh) {
+            this.cache.delete(url);
+        } else if (this.cache.has(url)) {
             return of(this.cache.get(url)!);
         }
 

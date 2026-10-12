@@ -9,6 +9,22 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+## Unreleased
+
+### Added
+
+- **Navigation nodes carry the server's access state.** `NaviGraphNodeFlat.access`
+  is `'allowed'` or `'elevate'`. `'elevate'` marks a node that a member of admin
+  can open once the session is elevated; the admin shows it with a lock instead
+  of hiding it. A server that does not send the field is read as `'allowed'`
+  (`naviAccessOf`), so nothing changes against it.
+- `NaviGraphService.loadAdminNav(url, { fresh: true })` asks the server again
+  instead of answering from the per-URL cache: the answer differs before and
+  after a grant, so a change of elevation must re-ask.
+- **`ElevationState.mayElevate`** and `ElevationService.mayElevate()`: whether
+  this account may elevate at all, as the server answered it. Absent reads as
+  false.
+
 ## 2.0.0-alpha.5 - 2026-10-09
 
 ### Changed

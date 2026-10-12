@@ -27,6 +27,11 @@ export interface ElevationState {
     mfaRequired: boolean;
     /** What the prompt shows before asking; two of the codes mean this account cannot elevate yet. */
     warnings: ElevationWarning[];
+    /**
+     * Whether this account may elevate at all -- a member of the admin group, elevated or not. The one source a
+     * client offers "Elevate session" from; absent (an older server) reads as false.
+     */
+    mayElevate?: boolean;
 }
 
 /**

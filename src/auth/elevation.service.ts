@@ -123,6 +123,9 @@ export class ElevationService {
     /** Convenience over `state`: false until the server has said otherwise. */
     readonly elevated = (): boolean => this.state()?.elevated ?? false;
 
+    /** Whether this account may elevate at all, as the server answered it: what "Elevate session" is offered from. */
+    readonly mayElevate = (): boolean => this.state()?.mayElevate ?? false;
+
     /** `expiresAt` as a Date, null when not elevated. */
     readonly expiresAt = (): Date | null => {
         const iso = this.state()?.expiresAt;

@@ -9,9 +9,27 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+### Changed
+
+- **A person's refused write opens the elevation prompt, and is sent again
+  once they elevate.** A write refused for want of elevation (a stamped 403)
+  holds the request and opens the prompt above whatever the person is in. An
+  edit dialog stays open beneath it, with its input. On a grant, the write is
+  sent once more and the caller receives that answer. If the session is
+  already elevated, it is sent once more without asking. A decline tells
+  `ELEVATION_NOTICE`, naming the action, and hands back the 403. The repeat
+  passes no prompt a second time. Reads and background requests still open
+  nothing.
+
 ## Unreleased
 
 ### Added
+
+- **`ELEVATION_ACTION`, `ElevationService.canPrompt` and `apiBase`.** A caller
+  can name a write in the person's words ("Saving the menu entry") for the
+  elevation prompt and notice. `ElevationPromptRequest.action` and the notice's
+  optional second argument carry it. Without it, the action is the method's
+  verb and the resource the URL names ("Saving navi nodes").
 
 - **Navigation nodes carry the server's access state.** `NaviGraphNodeFlat.access`
   is `'allowed'` or `'elevate'`. `'elevate'` marks a node that a member of admin

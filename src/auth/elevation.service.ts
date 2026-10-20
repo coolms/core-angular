@@ -163,6 +163,16 @@ export class ElevationService {
         }
     }
 
+    /** Whether a prompt can be opened at all: this install offers elevation and a prompt is bound. */
+    get canPrompt(): boolean {
+        return this.available && this.prompt !== null;
+    }
+
+    /** The manifest's API base, as {@link isThisApi} reads it. */
+    get apiBase(): string {
+        return this.store.selectSnapshot(AppConfigState.manifest)?.apiBase ?? '/api/v1';
+    }
+
     /** The manifest carries the URL; without it the service is inert, not broken. */
     get available(): boolean {
         return this.url !== null;

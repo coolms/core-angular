@@ -1,3 +1,4 @@
+import { HttpContextToken } from '@angular/common/http';
 import { InjectionToken } from '@angular/core';
 import type { Observable } from 'rxjs';
 import type { ElevationState } from './elevation.types';
@@ -18,6 +19,8 @@ import type { ElevationState } from './elevation.types';
 export interface ElevationPromptRequest {
     state:    ElevationState;
     refusal?: string;
+    /** The refused action in words ("Saving navi nodes"), when a refused request opened the prompt. */
+    action?:  string;
 }
 
 /**
@@ -58,8 +61,16 @@ export const ELEVATION_PROMPT = new InjectionToken<ElevationPromptPort>(
  * readable by the error service.
  */
 export interface ElevationNoticePort {
-    refused(refusal: string): void;
+    /** `action` names what the person did ("Saving navi nodes"); absent from older callers. */
+    refused(refusal: string, action?: string): void;
 }
+
+/**
+ * What a write IS, in the person's words, for the elevation prompt and notice when the server refuses it -- set by a
+ * caller that knows better than the URL ("Saving the menu entry"). Without it the interceptor names the method's verb
+ * and the resource the URL names.
+ */
+export const ELEVATION_ACTION = new HttpContextToken<string | null>(() => null);
 
 /** Optional, like {@link ELEVATION_PROMPT}: with nothing bound, a refusal is only a 403. */
 export const ELEVATION_NOTICE = new InjectionToken<ElevationNoticePort>(

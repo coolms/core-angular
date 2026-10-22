@@ -21,11 +21,11 @@ predate this file would be a worse record than not having them.
   passes no prompt a second time. Reads and background requests still open
   nothing.
 
-## Unreleased
+## 2.0.0-alpha.6 - 2026-10-22
 
 ### Changed
 
-- **`engines.node` names exactly the Node lines CI runs.** It moves from
+- **Breaking: `engines.node` names exactly the Node lines CI runs.** It moves from
   `^22.22.3 || ^24.15.0 || >=26` to `^22.22.3 || ^24.15.0 || ^26.0.0`: Node 27
   and later are not declared until CI runs them. Within each line the floor is
   the highest one any package in the lockfile declares. CI checks both, from

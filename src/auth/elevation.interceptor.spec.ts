@@ -187,7 +187,14 @@ describe('elevationInterceptor', () => {
         expect(told).toEqual([]);
         httpMock.expectNone(ELEVATION);
     });
+});
 
+/**
+ * A pure function, so outside the describe above: its afterEach verifies the HTTP mock that only setup() creates.
+ * Inside it, this check failed whenever the random order ran it before any test that called setup() -- httpMock was
+ * still undefined ("Cannot read properties of undefined (reading 'verify')") -- and passed otherwise.
+ */
+describe('elevationInterceptor -- the action named', () => {
     it('names the action as the caller said it, or by the method and the resource', () => {
         const named = new HttpRequest('PATCH', '/api/v1/navi/nodes/1', {}, {
             context: new HttpContext().set(ELEVATION_ACTION, 'Saving the menu entry'),

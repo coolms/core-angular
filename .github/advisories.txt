@@ -9,4 +9,3 @@
 # reasons below were measured on 2026-10-07 from this lockfile: which direct dependencies bring the package in, whether
 # it ships, and what npm offers to clear it.
 
-source-map-js  GHSA-68fv-2mgg-jv7q  high      2026-11-06  Build and test tooling only, not in the published package (through ng-packagr); a lockfile update within the declared ranges clears it.

@@ -76,12 +76,26 @@ export const ELEVATION_REQUIRED_HEADER = 'X-Elevation-Required';
 export const BACKGROUND_REQUEST = new HttpContextToken<boolean>(() => false);
 
 /**
+ * The problem type of a 403 refused for want of elevation. The server writes it
+ * where it writes {@link ELEVATION_REQUIRED_HEADER}, naming the check that refused in the
+ * `elevationGate` member; a 403 for any other reason has another type.
+ */
+export const ELEVATION_REQUIRED_PROBLEM_TYPE = '/errors/elevation-required';
+
+/**
  * Whether a failed request was refused for want of elevation: a 403 carrying
- * the server's stamp. The one test every reader of a refusal uses -- the
- * interceptor, a page's inline state, the error text -- so they cannot disagree.
+ * the server's stamp -- its problem type, or the header. The one test every
+ * reader of a refusal uses -- the interceptor, a page's inline state, the error
+ * text -- so they cannot disagree.
  */
 export function isElevationRefusal(err: unknown): boolean {
-    return err instanceof HttpErrorResponse && err.status === 403 && !!err.headers.get(ELEVATION_REQUIRED_HEADER);
+    if (!(err instanceof HttpErrorResponse) || err.status !== 403) {
+        return false;
+    }
+    const body = err.error as { type?: unknown } | null;
+
+    return (typeof body === 'object' && body !== null && body.type === ELEVATION_REQUIRED_PROBLEM_TYPE)
+        || !!err.headers.get(ELEVATION_REQUIRED_HEADER);
 }
 
 @Injectable({ providedIn: 'root' })

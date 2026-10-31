@@ -9,3 +9,5 @@
 # reasons below were measured on 2026-10-07 from this lockfile: which direct dependencies bring the package in, whether
 # it ships, and what npm offers to clear it.
 
+
+minimatch                  GHSA-g3hv-75wg-m249  moderate  2026-11-30  Build and test tooling only, not in the published package (minimatch 3.1.5 and 10.2.6 through eslint); the admin build that compiles this package has 0 of 2,006 sources from minimatch; every pattern is the repository's own lint config. Accepted build-only for 30 days, 2026-10-31.

@@ -1,3 +1,4 @@
+import { audienceRefusalOf } from '../audience-refusal';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -32,15 +33,22 @@ export class LoginComponent {
     private readonly router = inject(Router);
 
     /** Shown when the guard signed an account out because the console is not granted to it. */
-    static readonly NO_CONSOLE_ACCESS = 'This account has no access to the console.';
+    static readonly NO_CONSOLE_ACCESS = 'This account may not enter the admin.';
+
+    /** Shown when a sign-in from before audiences was ended: it names no interface, and a new one will. */
+    static readonly SIGN_IN_AGAIN = 'Please sign in again.';
 
     constructor() {
         // Observed, not read once: after a sign-in the guard's redirect lands on this same
         // page, and the component is reused rather than made again.
         inject(ActivatedRoute).queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
-            if (ConsoleAccessService.REFUSED_REASON === params.get('reason')) {
+            const reason = params.get('reason');
+            if (ConsoleAccessService.REFUSED_REASON === reason) {
                 this.loading.set(false);
                 this.error.set(LoginComponent.NO_CONSOLE_ACCESS);
+            } else if (ConsoleAccessService.SIGN_IN_AGAIN_REASON === reason) {
+                this.loading.set(false);
+                this.error.set(LoginComponent.SIGN_IN_AGAIN);
             }
         });
     }
@@ -64,6 +72,11 @@ export class LoginComponent {
             },
             error: (err) => {
                 this.loading.set(false);
+                // A refusal of entry is an answer, not a fault: said as this interface says it, whatever its detail.
+                if ('not-granted' === audienceRefusalOf(err)) {
+                    this.error.set(LoginComponent.NO_CONSOLE_ACCESS);
+                    return;
+                }
                 this.error.set(err?.error?.detail ?? err?.error?.message ?? err?.message ?? 'Invalid credentials. Please try again.');
             },
         });

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, type UrlTree } from '@angular/router';
@@ -93,6 +94,23 @@ describe('LoginComponent', () => {
         expect(submitted).toContain('Signing in');
         expect(answered).toContain('Invalid credentials.');
         expect(answered).not.toContain('Signing in');
+    });
+
+    it('says a sign-in refused by audience as this interface says it, not the server\'s detail', async () => {
+        const refused = new HttpErrorResponse({ status: 403, error: { type: '/errors/identity/audience-not-granted',
+            title: 'Audience not granted', status: 403, detail: 'This account may not enter the Workspace.' } });
+        const { answered } = await signIn(refused);
+
+        expect(answered).toContain(LoginComponent.NO_CONSOLE_ACCESS);
+        expect(answered).not.toContain('Workspace');
+    });
+
+    it('asks a sign-in from before audiences to sign in again', async () => {
+        configure(null);
+        const harness = await RouterTestingHarness.create('/login?reason=' + ConsoleAccessService.SIGN_IN_AGAIN_REASON);
+        harness.detectChanges();
+
+        expect(text(harness)).toContain(LoginComponent.SIGN_IN_AGAIN);
     });
 
     it('says so when the page is opened with the reason', async () => {

@@ -1,3 +1,5 @@
+import { ConsoleAccessService } from '../bootstrap/console-access.service';
+import { audienceRefusalOf } from './audience-refusal';
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -92,10 +94,20 @@ export class AuthRefreshCoordinator {
         this.inFlight = defer(() => this.refreshWithCrossTabLock(refreshToken, refusedAccessToken)).pipe(
             catchError(refreshErr => {
                 const isAuthFailure = refreshErr instanceof HttpErrorResponse && refreshErr.status === 401;
-                if (isAuthFailure) {
+                // A refresh refused by audience ends the session as a 401 does, and the sign-in page says why: the
+                // account may not enter this interface, or its sign-in names none and a new one will.
+                const refusal = audienceRefusalOf(refreshErr);
+                if (isAuthFailure || null !== refusal) {
                     this.store.dispatch(new Logout());
                     if (this.router.navigated) {
-                        void this.router.navigate(['/login']);
+                        const reason = null === refusal
+                            ? null
+                            : ('required' === refusal
+                                ? ConsoleAccessService.SIGN_IN_AGAIN_REASON
+                                : ConsoleAccessService.REFUSED_REASON);
+                        void (null === reason
+                            ? this.router.navigate(['/login'])
+                            : this.router.navigate(['/login'], { queryParams: { reason } }));
                     }
                 }
                 return throwError(() => refreshErr);

@@ -112,6 +112,17 @@ describe('ConsoleAccessService', () => {
         httpMock.expectNone(ConsoleAccessService.URL);
     });
 
+    it('tells a token that names no audience to sign in again, and a refusal of entry is refused', async () => {
+        const stale = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush({ type: '/errors/identity/audience-required', title: 'Audience required', status: 403, detail: 'x' }, { status: 403, statusText: 'Forbidden' });
+        expect(await stale).toBe('sign-in-again');
+
+        actions$.next({ action: new Logout(), status: ActionStatus.Dispatched });
+        const refused = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush({ type: '/errors/identity/audience-not-granted', title: 'Audience not granted', status: 403, detail: 'x' }, { status: 403, statusText: 'Forbidden' });
+        expect(await refused).toBe('refused');
+    });
+
     it('does not keep a failure to ask', async () => {
         const first = service.ensure();
         httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 500, statusText: 'Server Error' });

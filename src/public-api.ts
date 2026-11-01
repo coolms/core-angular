@@ -38,6 +38,7 @@ export * from './api/realtime-token.client';
 export * from './auth/auth.actions';
 export * from './auth/auth.state';
 export * from './auth/auth.guard';
+export * from './auth/audience-refusal';
 export * from './auth/login-page.guard';
 export * from './auth/auth.interceptor';
 export * from './auth/auth-refresh.coordinator';

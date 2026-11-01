@@ -1,3 +1,4 @@
+import { audienceRefusalOf } from '../auth/audience-refusal';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Actions, ofActionDispatched, Store } from '@ngxs/store';
@@ -8,7 +9,10 @@ import { AppConfigState, SetAppConfig } from '../state/app-config.state';
 import { type ConsoleManifestResponse } from '../api/api-manifest.types';
 
 /** What the server said about this sign-in and the console. */
-export type ConsoleAccess = 'granted' | 'refused' | 'unknown';
+/**
+ * `sign-in-again`: the sign-in names no interface (a token from before audiences); signing in again mends it.
+ */
+export type ConsoleAccess = 'granted' | 'refused' | 'sign-in-again' | 'unknown';
 
 interface Asked {
     readonly access: ConsoleAccess;
@@ -55,6 +59,9 @@ export class ConsoleAccessService {
     /** The login page's query parameter value for "signed out: no console access". */
     static readonly REFUSED_REASON = 'no-console-access';
 
+    /** The login page's query parameter value for "signed out: sign in again" (a sign-in that names no audience). */
+    static readonly SIGN_IN_AGAIN_REASON = 'sign-in-again';
+
     private readonly http  = inject(HttpClient);
     private readonly store = inject(Store);
 
@@ -90,7 +97,7 @@ export class ConsoleAccessService {
                     : throwError(() => error)),
                 map((response): Asked => ({ access: 'granted', response })),
                 catchError((error: unknown) => of<Asked>({
-                    access: error instanceof HttpErrorResponse && 403 === error.status ? 'refused' : 'unknown',
+                    access: accessOf(error),
                     response: null,
                 })),
             ),
@@ -132,4 +139,15 @@ export class ConsoleAccessService {
             manifest: { ...(config?.manifest ?? {}), ...response.manifest },
         }));
     }
+}
+
+/**
+ * A refused manifest read as an answer: a token that names no audience is told to sign in again; any other 403 is a
+ * refusal (the account may not enter the admin); anything else is a failure to ask.
+ */
+function accessOf(error: unknown): ConsoleAccess {
+    if ('required' === audienceRefusalOf(error)) {
+        return 'sign-in-again';
+    }
+    return error instanceof HttpErrorResponse && 403 === error.status ? 'refused' : 'unknown';
 }

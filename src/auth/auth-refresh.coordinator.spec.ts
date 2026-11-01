@@ -1,3 +1,4 @@
+import { ConsoleAccessService } from '../bootstrap/console-access.service';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -53,7 +54,13 @@ describe('AuthRefreshCoordinator', () => {
                     },
                 },
                 { provide: UserPreferencesService, useValue: { loadFromServer: () => undefined } },
-                { provide: Router, useValue: { navigated: true, navigate: (c: unknown[]) => navigated.push(c) } },
+                {
+                    provide: Router,
+                    useValue: {
+                        navigated: true,
+                        navigate: (c: unknown[], extras?: unknown) => navigated.push(undefined === extras ? c : [...c, extras]),
+                    },
+                },
             ],
         });
     });
@@ -87,6 +94,32 @@ describe('AuthRefreshCoordinator', () => {
         expect(store.selectSnapshot(AuthState.isAuthenticated)).toBeFalse();
         expect(localStorage.getItem(KEY)).toBeNull();
         expect(navigated).toEqual([['/login']]);
+    });
+
+    it('ends the session when the refresh is refused by audience, and the sign-in page says which', async () => {
+        for (const [problem, reason] of [
+            [{ type: '/errors/identity/audience-required', title: 'Audience required', status: 403, detail: 'x' }, ConsoleAccessService.SIGN_IN_AGAIN_REASON],
+            [{ type: '/errors/identity/audience-not-granted', title: 'Audience not granted', status: 403, detail: 'x' }, ConsoleAccessService.REFUSED_REASON],
+        ] as const) {
+            navigated = [];
+            const store = signedIn();
+            answer = () => throwError(() => new HttpErrorResponse({ status: 403, error: problem }));
+
+            await expectAsync(firstValueFrom(TestBed.inject(AuthRefreshCoordinator).refresh('refresh-1', 'access-1'))).toBeRejected();
+
+            expect(store.selectSnapshot(AuthState.isAuthenticated)).toBeFalse();
+            expect(navigated).toEqual([['/login', { queryParams: { reason } }]]);
+        }
+    });
+
+    it('keeps the session on a 403 that is no refusal by audience', async () => {
+        const store = signedIn();
+        answer = () => throwError(() => new HttpErrorResponse({ status: 403, error: { type: '/errors/403' } }));
+
+        await expectAsync(firstValueFrom(TestBed.inject(AuthRefreshCoordinator).refresh('refresh-1', 'access-1'))).toBeRejected();
+
+        expect(store.selectSnapshot(AuthState.isAuthenticated)).toBeTrue();
+        expect(navigated).toEqual([]);
     });
 
     it('takes a rotation another tab already made, without a request, and mirrors it here', async () => {

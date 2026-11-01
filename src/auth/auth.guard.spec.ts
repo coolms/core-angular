@@ -78,6 +78,11 @@ describe('authGuard', () => {
         expect(dispatched.length).toBe(0);
     });
 
+    it('signs a sign-in that names no audience out and asks for a new one', async () => {
+        expect(url(await run(true, 'sign-in-again'))).toBe('/login?reason=' + ConsoleAccessService.SIGN_IN_AGAIN_REASON);
+        expect(signedOut).toBe(1);
+    });
+
     it('opens when the question failed, and signs nobody out', async () => {
         expect(await run(true, 'unknown')).toBeTrue();
         expect(signedOut).toBe(0);

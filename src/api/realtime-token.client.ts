@@ -89,7 +89,7 @@ export class RealtimeTokenClient {
 
     connectionToken(): Observable<CentrifugoConnectionTokenDto> {
         return defer(() => this.injector.get(ConsoleAccessService).ensure()).pipe(
-            switchMap(access => 'refused' === access
+            switchMap(access => 'refused' === access || 'sign-in-again' === access
                 ? throwError(() => new Error(RealtimeTokenClient.REFUSED))
                 : this.http.post<CentrifugoConnectionTokenDto>(this.manifest.apiBase + '/centrifugo/connection-token', {}, BACKGROUND)),
         );

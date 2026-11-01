@@ -154,7 +154,7 @@ export function consoleChildren(entries: readonly ConsoleEntry[]): Routes {
  * The providers a theme adds for the assembled entries: the store with the
  * host's states and every module state -- in its strict-CSP mode, which reads
  * a selector's path without `new Function`, so the admin needs no `'unsafe-eval'`
- * (the eval its CSP reports named, measured 2026-11-01) -- the registry bindings (an
+ * (every eval its CSP reported was that getter) -- the registry bindings (an
  * initializer, so they exist before the first render), every module
  * provision, and {@link CONSOLE_ENTRIES} for the shell. Place it AFTER the
  * library providers a module's provisions extend (the editor bridge, the

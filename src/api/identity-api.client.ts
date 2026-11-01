@@ -4,6 +4,7 @@ import { Store } from '@ngxs/store';
 import { type Observable } from 'rxjs';
 
 import { AppConfigState } from '../state/app-config.state';
+import { AUTH_AUDIENCE } from './auth-audience';
 import type { ApiManifest } from './api-manifest.types';
 import type { TokenResponse, UserDto } from './auth.types';
 
@@ -27,6 +28,7 @@ import type { TokenResponse, UserDto } from './auth.types';
 export class IdentityApiClient {
     private readonly http  = inject(HttpClient);
     private readonly store = inject(Store);
+    private readonly audience = inject(AUTH_AUDIENCE);
 
     /** URLs come from the boot manifest, which core already owns. */
     private get manifest(): ApiManifest {
@@ -35,8 +37,12 @@ export class IdentityApiClient {
         return m;
     }
 
+    /** Signs in; names the application's audience ({@link AUTH_AUDIENCE}) when it provides one. */
     login(identifier: string, password: string): Observable<TokenResponse> {
-        return this.http.post<TokenResponse>(this.manifest.auth!.login, { identifier, password });
+        const body = this.audience === null
+            ? { identifier, password }
+            : { identifier, password, audience: this.audience };
+        return this.http.post<TokenResponse>(this.manifest.auth!.login, body);
     }
 
     refresh(refreshToken: string): Observable<TokenResponse> {

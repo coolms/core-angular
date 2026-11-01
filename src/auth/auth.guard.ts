@@ -40,14 +40,15 @@ export const authGuard: CanActivateFn = () => {
                     if (!store.selectSnapshot(AuthState.isAuthenticated)) {
                         return of(router.createUrlTree(['/login']));
                     }
-                    return 'refused' !== access
-                        ? of(true)
-                        : consoleAccess.signOut().pipe(
-                            map(() => router.createUrlTree(
-                                ['/login'],
-                                { queryParams: { reason: ConsoleAccessService.REFUSED_REASON } },
-                            )),
-                        );
+                    if ('refused' !== access && 'sign-in-again' !== access) {
+                        return of(true);
+                    }
+                    const reason = 'refused' === access
+                        ? ConsoleAccessService.REFUSED_REASON
+                        : ConsoleAccessService.SIGN_IN_AGAIN_REASON;
+                    return consoleAccess.signOut().pipe(
+                        map(() => router.createUrlTree(['/login'], { queryParams: { reason } })),
+                    );
                 }),
             );
         }),

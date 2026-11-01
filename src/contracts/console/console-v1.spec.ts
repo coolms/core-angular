@@ -1,7 +1,7 @@
 import { ApplicationInitStatus, Component, InjectionToken, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, type Route } from '@angular/router';
-import { Store } from '@ngxs/store';
+import { NgxsConfig, Store } from '@ngxs/store';
 import { firstValueFrom, of, ReplaySubject, type Observable } from 'rxjs';
 import { AppInitService } from '../../bootstrap/app-init.service';
 import { type ConsoleAccess, ConsoleAccessService } from '../../bootstrap/console-access.service';
@@ -197,6 +197,18 @@ describe('console@1 -- the host side', () => {
         manifest.set(publicConfig as typeof MANIFEST);
         ensure = () => Promise.resolve('refused');
         expect(await askGuard(consoleChildren(entries)[0])).toBeFalse();
+    });
+
+ it('provideConsole sets up the store in its strict-CSP mode: no selector is read through new Function', () => {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+            providers: [
+                provideRouter([]),
+                provideConsole(entries, { hostStates: [] }),
+            ],
+        });
+
+        expect(TestBed.inject(NgxsConfig).compatibility.strictContentSecurityPolicy).toBeTrue();
     });
 
  it('provideConsole binds every entry`s names into the registry', async () => {

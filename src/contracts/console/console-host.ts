@@ -152,7 +152,9 @@ export function consoleChildren(entries: readonly ConsoleEntry[]): Routes {
 
 /**
  * The providers a theme adds for the assembled entries: the store with the
- * host's states and every module state, the registry bindings (an
+ * host's states and every module state -- in its strict-CSP mode, which reads
+ * a selector's path without `new Function`, so the admin needs no `'unsafe-eval'`
+ * (the eval its CSP reports named, measured 2026-11-01) -- the registry bindings (an
  * initializer, so they exist before the first render), every module
  * provision, and {@link CONSOLE_ENTRIES} for the shell. Place it AFTER the
  * library providers a module's provisions extend (the editor bridge, the
@@ -165,7 +167,10 @@ export function provideConsole(
     const checked = assembleConsole(entries);
     const providers: (Provider | EnvironmentProviders)[] = [
         { provide: CONSOLE_ENTRIES, useValue: checked },
-        provideStore([...options.hostStates, ...checked.flatMap(e => e.states ?? [])]),
+        provideStore(
+            [...options.hostStates, ...checked.flatMap(e => e.states ?? [])],
+            { compatibility: { strictContentSecurityPolicy: true } },
+        ),
         provideAppInitializer(() => {
             const registry = inject(ComponentRegistry);
             for (const e of checked) {

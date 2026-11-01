@@ -30,6 +30,7 @@ export * from './api/api-manifest.types';
 export * from './api/auth.types';
 export * from './api/form-render.types';
 export * from './api/hydra.types';
+export * from './api/auth-audience';
 export * from './api/identity-api.client';
 export * from './api/realtime-token.client';
 

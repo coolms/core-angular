@@ -21,6 +21,13 @@ predate this file would be a worse record than not having them.
   passes no prompt a second time. Reads and background requests still open
   nothing.
 
+### Added
+
+- **The identity manifest names the signed-in sessions' addresses.**
+  `sessionsUrl` lists the live sign-ins; `sessionUrl` (`{sessionId}`) ends
+  one; `userSessionsUrl` (`{id}`) ends every sign-in of one account. All
+  three are optional: a server that does not send them has no sessions page.
+
 ## 2.0.0-alpha.6 - 2026-10-22
 
 ### Changed

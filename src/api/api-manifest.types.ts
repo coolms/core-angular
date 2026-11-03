@@ -182,6 +182,12 @@ export interface IdentityApiManifest {
     readonly userLegalHoldsUrl?:  string;  // GET / POST /auth/users/{id}/legal-holds pattern; DELETE .../{holdId}
     readonly holdsSettingsBlock?: string;  // the holds register's settings block key
     readonly legalHoldFormId?:    string | null; // the form rendered to place a hold
+    // The signed-in sessions: the list, one sign-in to end, and every
+    // sign-in of one account to end. Optional: an older server does not send
+    // them and the client then shows no sessions page.
+    readonly sessionsUrl?:        string;  // GET /auth/sessions (page, itemsPerPage, personId, audience)
+    readonly sessionUrl?:         string;  // DELETE /auth/sessions/{sessionId} pattern
+    readonly userSessionsUrl?:    string;  // DELETE /auth/users/{id}/sessions pattern
 }
 
 /**

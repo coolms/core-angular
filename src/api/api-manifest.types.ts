@@ -295,6 +295,14 @@ export interface UiModuleEntryManifest {
     readonly framework: string;
 }
 
+/**
+ * The modules' own blocks of the manifest, by module name (`modules.section`):
+ * what a module names that the core entries above do not. Each block is the
+ * module's own shape; a client reads the keys it knows and treats a missing
+ * module or key as absent. Always an object, `{}` when no module has a block.
+ */
+export type ModulesApiManifest = Readonly<Record<string, Readonly<Record<string, unknown>> | undefined>>;
+
 export interface ApiManifest {
     readonly apiBase:           string;
     readonly ui?:               UiApiManifest;
@@ -315,6 +323,7 @@ export interface ApiManifest {
     readonly viewers?:          ViewerApiManifest;
     readonly supportedLocales?: Array<{ code: string; label: string }>;
     readonly platformDefaults?: PlatformDefaults;
+    readonly modules?:          ModulesApiManifest;
 }
 
 /**

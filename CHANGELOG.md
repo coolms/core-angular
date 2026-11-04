@@ -11,6 +11,7 @@ predate this file would be a worse record than not having them.
 
 ### Changed
 
+- **One settings read for the callers that ask together.** `IdentityApiClient.getSettings()` shares a read in flight with every caller that asks meanwhile: the services reading their own section of the person's settings at start-up (calendar, calls) made one request each. A call after the read has answered reads again, and a failed read is not kept.
 - **`cms-loader` turns the state component's spinner** (design-tokens' `--cms-spinner-*`, each with its value as the
   fallback) in place of the drawn exclamation mark, so every wait shows the one spinner `cms-state` turns. Its inputs
   (`label`, `inline`, `overlay`) and `--cms-loader-size` are unchanged; under reduced motion it breathes. A spec now

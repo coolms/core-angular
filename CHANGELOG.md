@@ -11,6 +11,11 @@ predate this file would be a worse record than not having them.
 
 ### Changed
 
+- **`cms-loader` turns the state component's spinner** (design-tokens' `--cms-spinner-*`, each with its value as the
+  fallback) in place of the drawn exclamation mark, so every wait shows the one spinner `cms-state` turns. Its inputs
+  (`label`, `inline`, `overlay`) and `--cms-loader-size` are unchanged; under reduced motion it breathes. A spec now
+  covers it.
+
 - **A person's refused write opens the elevation prompt, and is sent again
   once they elevate.** A write refused for want of elevation (a stamped 403)
   holds the request and opens the prompt above whatever the person is in. An

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { type Observable } from 'rxjs';
+import { type Observable, finalize, shareReplay } from 'rxjs';
 
 import { AppConfigState } from '../state/app-config.state';
 import { AUTH_AUDIENCE } from './auth-audience';
@@ -30,6 +30,9 @@ export class IdentityApiClient {
     private readonly store = inject(Store);
     private readonly audience = inject(AUTH_AUDIENCE);
 
+    /** The settings read while it is in flight, shared by every caller that asks meanwhile. */
+    private settingsRead$?: Observable<Record<string, Record<string, unknown>>>;
+
     /** URLs come from the boot manifest, which core already owns. */
     private get manifest(): ApiManifest {
         const m = this.store.selectSnapshot(AppConfigState.manifest);
@@ -57,13 +60,28 @@ export class IdentityApiClient {
         return this.http.get<UserDto>(this.manifest.auth!.me);
     }
 
+    /**
+     * The person's settings. Several services read them at start-up, each for its own section; callers that ask while
+     * a read is in flight share it, so the page makes one request. A call after it has answered reads again: nothing
+     * is kept past the answer, so a save is never hidden behind an old read.
+     */
     getSettings(): Observable<Record<string, Record<string, unknown>>> {
+        if (this.settingsRead$) return this.settingsRead$;
+
         // Force plain JSON. Angular's default Accept carries a wildcard, which
         // makes the backend prefer application/ld+json -- and the section keys
         // are then lost inside the Hydra member array.
-        return this.http.get<Record<string, Record<string, unknown>>>(
+        const read$ = this.http.get<Record<string, Record<string, unknown>>>(
             this.manifest.identity!.settingsUrl,
             { headers: { Accept: 'application/json' } },
+        ).pipe(
+            finalize(() => {
+                if (this.settingsRead$ === read$) this.settingsRead$ = undefined;
+            }),
+            shareReplay({ bufferSize: 1, refCount: true }),
         );
+        this.settingsRead$ = read$;
+
+        return read$;
     }
 }

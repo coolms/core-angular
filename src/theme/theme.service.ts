@@ -17,8 +17,8 @@ const CHOICES: readonly ThemeChoice[] = ['light', 'dark', 'system'];
 /**
  * A CACHE, never a source of truth.
  *
- * The authoritative value is `preferences.theme` in `/auth/me/settings`, which
- * the Profile -> Preferences tab already writes. This copy exists only so the
+ * The authoritative value is `appearance.theme` in `/auth/me/settings`, which
+ * the Profile page's Appearance tab writes. This copy exists only so the
  * first paint of a reload is the right colour: the settings request is async,
  * so without it every load would start light and flip. It is deliberately NOT
  * stored via UserPreferencesService, which syncs its own bag to the server --
@@ -127,12 +127,12 @@ export class ThemeService {
 
         this.loadOnce$ = this.api.getSettings().pipe(
             map(all => {
-                const prefs = all['preferences'] as Record<string, unknown> | undefined;
+                const appearance = all['appearance'] as Record<string, unknown> | undefined;
                 // The accent rides along on the same response -- it is a field of
                 // the same section, so it costs no extra request.
-                this.setAccent(isAccent(prefs?.['accentColor']) ? prefs['accentColor'] : null);
+                this.setAccent(isAccent(appearance?.['accentColor']) ? appearance['accentColor'] : null);
 
-                return isChoice(prefs?.['theme']) ? prefs['theme'] : this._choice();
+                return isChoice(appearance?.['theme']) ? appearance['theme'] : this._choice();
             }),
             tap(choice => this.set(choice)),
             catchError(() => of(this._choice())),

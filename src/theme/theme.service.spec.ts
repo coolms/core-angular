@@ -55,7 +55,7 @@ describe('ThemeService', () => {
     });
 
     it('applies a stored dark preference to the document', () => {
-        const svc = setup({ preferences: { theme: 'dark' } });
+        const svc = setup({ appearance: { theme: 'dark' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -65,7 +65,7 @@ describe('ThemeService', () => {
     });
 
     it('applies a stored light preference even when the OS prefers dark', () => {
-        const svc = setup({ preferences: { theme: 'light' } });
+        const svc = setup({ appearance: { theme: 'light' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -76,7 +76,7 @@ describe('ThemeService', () => {
     });
 
     it('resolves `system` against the OS rather than picking a side', () => {
-        const svc = setup({ preferences: { theme: 'system' } });
+        const svc = setup({ appearance: { theme: 'system' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -87,13 +87,13 @@ describe('ThemeService', () => {
     });
 
     it('caches the choice so the next load paints the right colour first', () => {
-        const svc = setup({ preferences: { theme: 'dark' } });
+        const svc = setup({ appearance: { theme: 'dark' } });
         svc.ensureLoaded().subscribe();
 
         expect(localStorage.getItem(CACHE_KEY)).toBe('dark');
 
         // A fresh instance, before any request resolves, already knows.
-        const next = setup({ preferences: { theme: 'dark' } });
+        const next = setup({ appearance: { theme: 'dark' } });
         expect(next.choice()).toBe('dark');
         expect(next.resolved()).toBe('dark');
     });
@@ -111,7 +111,7 @@ describe('ThemeService', () => {
     });
 
     it('ignores a malformed stored value instead of applying it', () => {
-        const svc = setup({ preferences: { theme: 'neon' } });
+        const svc = setup({ appearance: { theme: 'neon' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -119,7 +119,7 @@ describe('ThemeService', () => {
     });
 
     it('re-themes when the Preferences tab saves', () => {
-        const svc = setup({ preferences: { theme: 'light' } });
+        const svc = setup({ appearance: { theme: 'light' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
         expect(attr()).toBe('light');
@@ -136,7 +136,7 @@ describe('ThemeService', () => {
     });
 
     it('applies a stored accent as an inline override on the document', () => {
-        const svc = setup({ preferences: { theme: 'dark', accentColor: '#3366ff' } });
+        const svc = setup({ appearance: { theme: 'dark', accentColor: '#3366ff' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -147,7 +147,7 @@ describe('ThemeService', () => {
     });
 
     it('leaves the stylesheet accent alone when the user has no override', () => {
-        const svc = setup({ preferences: { theme: 'dark', accentColor: null } });
+        const svc = setup({ appearance: { theme: 'dark', accentColor: null } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -160,7 +160,7 @@ describe('ThemeService', () => {
     it('refuses a stored accent that is not a plain hex colour', () => {
         // The value is substituted into a CSS custom property, so a stored
         // setting is untrusted input at the point of RENDER, not just on write.
-        const svc = setup({ preferences: { accentColor: 'red; background: url(//evil)' } });
+        const svc = setup({ appearance: { accentColor: 'red; background: url(//evil)' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -169,7 +169,7 @@ describe('ThemeService', () => {
     });
 
     it('clears the accent when the user empties the field', () => {
-        const svc = setup({ preferences: { accentColor: '#3366ff' } });
+        const svc = setup({ appearance: { accentColor: '#3366ff' } });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
         expect(document.documentElement.style.getPropertyValue('--cms-accent')).toBe('#3366ff');
@@ -187,7 +187,7 @@ describe('ThemeService', () => {
     });
 
     it('falls back to the deployment accent when the user has none', () => {
-        const svc = setup({ preferences: { accentColor: null } }, { platformAccent: '#0a7d2b' });
+        const svc = setup({ appearance: { accentColor: null } }, { platformAccent: '#0a7d2b' });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -198,7 +198,7 @@ describe('ThemeService', () => {
     });
 
     it('lets a personal accent beat the deployment one', () => {
-        const svc = setup({ preferences: { accentColor: '#3366ff' } }, { platformAccent: '#0a7d2b' });
+        const svc = setup({ appearance: { accentColor: '#3366ff' } }, { platformAccent: '#0a7d2b' });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -207,7 +207,7 @@ describe('ThemeService', () => {
     });
 
     it('returns to the deployment accent when the user clears theirs', () => {
-        const svc = setup({ preferences: { accentColor: '#3366ff' } }, { platformAccent: '#0a7d2b' });
+        const svc = setup({ appearance: { accentColor: '#3366ff' } }, { platformAccent: '#0a7d2b' });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -229,7 +229,7 @@ describe('ThemeService', () => {
     });
 
     it('ignores a malformed deployment accent', () => {
-        const svc = setup({ preferences: {} }, { platformAccent: 'rebeccapurple' });
+        const svc = setup({ appearance: {} }, { platformAccent: 'rebeccapurple' });
         svc.ensureLoaded().subscribe();
         TestBed.flushEffects();
 
@@ -239,7 +239,7 @@ describe('ThemeService', () => {
 
     it('loads the settings request only once', () => {
         let calls = 0;
-        const api = { getSettings: () => { calls++; return of({ preferences: { theme: 'dark' } }); } };
+        const api = { getSettings: () => { calls++; return of({ appearance: { theme: 'dark' } }); } };
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({
             providers: [
@@ -255,5 +255,14 @@ describe('ThemeService', () => {
         svc.ensureLoaded().subscribe();
 
         expect(calls).toBe(1);
+    });
+
+    it('reads the theme and the accent from appearance, never from the former preferences section', () => {
+        const svc = setup({ preferences: { theme: 'dark', accentColor: '#3366ff' } });
+        svc.ensureLoaded().subscribe();
+
+        expect(svc.choice()).toBe('system');
+        expect(svc.accent()).toBeNull();
+        expect(localStorage.getItem(CACHE_KEY)).not.toBe('dark');
     });
 });

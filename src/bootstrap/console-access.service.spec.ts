@@ -14,7 +14,9 @@ import { AppConfigState, SetAppConfig } from '../state/app-config.state';
  * Coverage:
  *   1. 200: `granted`, and the console's manifest is merged over the public one --
  *      what the sign-in page had stays, what the console needs arrives. Asked once.
- *   2. 403: `refused`, and kept: the guard does not ask again for this sign-in.
+ *   2. 403 audience-not-granted: `refused`, and kept: the guard does not ask again for this sign-in. A token for
+ *      the other interface (403 wrong-interface), or any other 403, is no answer: `unknown`, not kept, nothing
+ *      signed out.
  *   3. 500: `unknown`, and NOT kept -- a failure to ask is not an answer.
  *   4. A Logout makes the next navigation ask again (another sign-in, another answer).
  *   5. An answer that arrives after a change of account is kept for nobody: the one
@@ -25,6 +27,8 @@ import { AppConfigState, SetAppConfig } from '../state/app-config.state';
  *   6. Signing a refused account out ends the sign-in on the server, then here -- and
  *      here even when the server's answer is an error.
  */
+const NOT_GRANTED = { type: '/errors/identity/audience-not-granted', title: 'Audience not granted', status: 403, detail: 'x' };
+
 describe('ConsoleAccessService', () => {
     let service: ConsoleAccessService;
     let httpMock: HttpTestingController;
@@ -93,18 +97,30 @@ describe('ConsoleAccessService', () => {
         expect(dispatched.length).toBe(1);
     });
 
-    it('is still refused by an older server: a 404 at the new address, then a 403 at the old one', async () => {
+    it('is still refused by an older server by type: a 404 at the new address, then a 403 at the old one', async () => {
         const answer = service.ensure();
         httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 404, statusText: 'Not Found' });
-        httpMock.expectOne(ConsoleAccessService.LEGACY_URL).flush({}, { status: 403, statusText: 'Forbidden' });
+        httpMock.expectOne(ConsoleAccessService.LEGACY_URL).flush(NOT_GRANTED, { status: 403, statusText: 'Forbidden' });
 
         expect(await answer).toBe('refused');
         expect(dispatched.length).toBe(0);
     });
 
-    it('is refused on 403, and keeps the refusal for this sign-in', async () => {
-        const answer = service.ensure();
+    it('takes a 403 wrong-interface, or any other 403, for no answer: not kept, nothing signed out', async () => {
+        const wrong = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush({ type: '/errors/identity/wrong-interface', title: 'Wrong interface', status: 403, detail: 'x' }, { status: 403, statusText: 'Forbidden' });
+        expect(await wrong).toBe('unknown');
+        expect(dispatched.length).toBe(0);
+
+        const bare = service.ensure();
         httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 403, statusText: 'Forbidden' });
+        expect(await bare).toBe('unknown');
+        expect(dispatched.length).toBe(0);
+    });
+
+    it('is refused on 403 audience-not-granted, and keeps the refusal for this sign-in', async () => {
+        const answer = service.ensure();
+        httpMock.expectOne(ConsoleAccessService.URL).flush(NOT_GRANTED, { status: 403, statusText: 'Forbidden' });
 
         expect(await answer).toBe('refused');
         expect(dispatched.length).toBe(0);
@@ -129,13 +145,13 @@ describe('ConsoleAccessService', () => {
         expect(await first).toBe('unknown');
 
         const second = service.ensure();
-        httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 403, statusText: 'Forbidden' });
+        httpMock.expectOne(ConsoleAccessService.URL).flush(NOT_GRANTED, { status: 403, statusText: 'Forbidden' });
         expect(await second).toBe('refused');
     });
 
     it('asks again after a sign-out', async () => {
         const first = service.ensure();
-        httpMock.expectOne(ConsoleAccessService.URL).flush({}, { status: 403, statusText: 'Forbidden' });
+        httpMock.expectOne(ConsoleAccessService.URL).flush(NOT_GRANTED, { status: 403, statusText: 'Forbidden' });
         expect(await first).toBe('refused');
 
         actions$.next({ action: new Logout(), status: ActionStatus.Dispatched });

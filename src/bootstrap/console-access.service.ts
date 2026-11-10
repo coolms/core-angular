@@ -29,7 +29,8 @@ interface Asked {
  * route, and an account in no group sees the admin with an empty menu. A server from
  * before that answers only at `/api/v1/console/manifest`, to the `console` group, and
  * 403 to anyone else -- there a refused sign-in is still signed out; this asks the new
- * address first and the old one only on its 404. The public theme config
+ * address first and the old one only on its 404. Only a refusal by type (`audience-not-granted`) is a refusal: a
+ * bare 403 from such a server, or a token for the other interface, is no answer. The public theme config
  * read before sign-in carries only what the sign-in page needs; the rest arrives
  * here, once per sign-in, and is merged into the app config key by key: a key the
  * console's map carries replaces the public one whole, so the console's copy of a
@@ -142,12 +143,14 @@ export class ConsoleAccessService {
 }
 
 /**
- * A refused manifest read as an answer: a token that names no audience is told to sign in again; any other 403 is a
- * refusal (the account may not enter the admin); anything else is a failure to ask.
+ * A refused manifest read as an answer, by the problem's type alone: `audience-not-granted` is a refusal (this account
+ * may no longer enter the admin), and `audience-required` asks for a new sign-in. Every other answer -- a token for
+ * the other interface (`wrong-interface`), any other 403, a failure to ask -- is no answer, and never signs anyone out.
  */
 function accessOf(error: unknown): ConsoleAccess {
-    if ('required' === audienceRefusalOf(error)) {
-        return 'sign-in-again';
+    const refusal = audienceRefusalOf(error);
+    if ('not-granted' === refusal) {
+        return 'refused';
     }
-    return error instanceof HttpErrorResponse && 403 === error.status ? 'refused' : 'unknown';
+    return 'required' === refusal ? 'sign-in-again' : 'unknown';
 }

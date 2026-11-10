@@ -11,6 +11,15 @@ predate this file would be a worse record than not having them.
 
 ### Changed
 
+- **Only a refusal of entry signs out.** The server answers a token sent to the other interface with 403
+  `/errors/identity/wrong-interface` (`WRONG_INTERFACE`), and keeps `/errors/identity/audience-not-granted` for an
+  account that may no longer enter. `ConsoleAccessService` read every 403 on the admin manifest as a refusal, and the
+  guard signed the person out; now only `audience-not-granted` is `refused` (`audience-required` still asks for a new
+  sign-in), and a token for the other interface, or any other 403, is no answer: not kept, nobody signed out. The
+  start-up session check (`AppInitService`) no longer refreshes and ends a session on such a 403 either:
+  `sessionEndsOn(error)` says which refusals may. An older server's bare 403 at the legacy manifest address is no
+  longer a refusal.
+
 - **The theme and the accent are read from the person's `appearance` settings.** `ThemeService` reads
   `appearance.theme` and `appearance.accentColor` from `GET /auth/me/settings`, the section the server declares for
   them; it no longer reads them from `preferences`.

@@ -122,6 +122,16 @@ describe('AuthRefreshCoordinator', () => {
         expect(navigated).toEqual([]);
     });
 
+    it('keeps the session on a 403 wrong-interface: a token for the other interface is no refusal of the account', async () => {
+        const store = signedIn();
+        answer = () => throwError(() => new HttpErrorResponse({ status: 403, error: { type: '/errors/identity/wrong-interface', title: 'Wrong interface', status: 403 } }));
+
+        await expectAsync(firstValueFrom(TestBed.inject(AuthRefreshCoordinator).refresh('refresh-1', 'access-1'))).toBeRejected();
+
+        expect(store.selectSnapshot(AuthState.isAuthenticated)).toBeTrue();
+        expect(navigated).toEqual([]);
+    });
+
     it('takes a rotation another tab already made, without a request, and mirrors it here', async () => {
         const store = signedIn();
         // A sibling tab rotated: the shared copy moved on, this tab's state has not

@@ -4,6 +4,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { catchError, firstValueFrom, map, of, ReplaySubject, tap } from 'rxjs';
+import { sessionEndsOn } from '../auth/audience-refusal';
 import { Logout, RestoreSession } from '../auth/auth.actions';
 import { AuthState } from '../auth/auth.state';
 import { BYPASS_AUTH } from '../auth/auth.interceptor';
@@ -151,7 +152,8 @@ export class AppInitService {
      */
     private async validateSession(meUrl: string): Promise<void> {
         const token = this.store.selectSnapshot(AuthState.accessToken);
-        if (await this.probe(meUrl, token)) {
+        const first = await this.probe(meUrl, token);
+        if (true === first || !sessionEndsOn(first)) {
             return;
         }
         const refreshToken = this.store.selectSnapshot(AuthState.refreshToken);
@@ -171,20 +173,21 @@ export class AppInitService {
         // looked fresh, which a revoked token's does. The re-probe stays: a
         // second rejection means the session is genuinely gone, whatever path
         // the coordinator took.
-        if (!(await this.probe(meUrl, refreshedToken))) {
+        const again = await this.probe(meUrl, refreshedToken);
+        if (true !== again && sessionEndsOn(again)) {
             this.store.dispatch(new Logout());
         }
     }
 
-    /** GET an authed endpoint with an explicit Bearer header, bypassing the interceptor. */
-    private probe(url: string, token: string | null): Promise<boolean> {
+    /** GET an authed endpoint with an explicit Bearer header, bypassing the interceptor: true, or what refused it. */
+    private probe(url: string, token: string | null): Promise<unknown> {
         return firstValueFrom(
             this.http.get(url, {
                 context: new HttpContext().set(BYPASS_AUTH, true),
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             }).pipe(
-                map(() => true),
-                catchError(() => of(false)),
+                map((): true => true),
+                catchError((error: unknown) => of(error)),
             ),
         );
     }

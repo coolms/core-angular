@@ -1,64 +1,101 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { Subject, debounceTime } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
 import { BACKGROUND_REQUEST } from '../auth/elevation.service';
+import { ErrorHandlerService } from '../errors/error-handler.service';
+import { PREFERENCES_NOTICE } from './preferences-notice.port';
 import { type DataGridPreference } from './user-preferences.types';
 
+/** The prefix of a grid's own entry: `datagrid:<gridId>`. */
+export const DATAGRID_ENTRY_PREFIX = 'datagrid:';
+
+/** The entry a grid's preferences are kept in. */
+export function datagridEntry(gridId: string): string {
+    return DATAGRID_ENTRY_PREFIX + gridId;
+}
+
+/** Entries kept under these ids before grids had entries of their own; never taken for a grid. */
+const NAMESPACES = new Set(['grids', 'panel', 'page', 'terminal', 'nav']);
+
+function isObject(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** A grid entry's columns and widths, without the fields a reset left empty (null); null when it has neither. */
+function gridPrefOf(entry: unknown): DataGridPreference | null {
+    if (!isObject(entry)) return null;
+    const pref: DataGridPreference = {};
+    if (Array.isArray(entry['columns'])) pref.columns = entry['columns'] as string[];
+    if (isObject(entry['columnWidths'])) pref.columnWidths = entry['columnWidths'] as Record<string, number>;
+    return pref.columns === undefined && pref.columnWidths === undefined ? null : pref;
+}
+
 /**
- * Unified user preferences service -- all preference types share one
- * localStorage key (`coolms_ui_prefs`) and one debounced server-sync pipeline.
+ * The person's interface preferences: one localStorage key (`coolms_ui_prefs`) holding the entries the server keeps
+ * (PATCH /auth/me/preferences, read back from GET /auth/me's uiPrefs), each an object of fields, by id:
  *
- * Key naming convention (stored as nested objects, referenced via dot-notation):
+ *   datagrid:{gridId}         { columns, columnWidths }   one entry per grid
+ *   panel                     { {persistKey}: { width, collapsed } }
+ *   page                      { vfs: {...}, media: {...}, nav: { lastRoute } }
+ *   terminal                  { height }
  *
- *   // Grids
- *   grids.{gridId}.columns
- *   grids.{gridId}.columnWidths
- *
- *   // Panels (ExplorerLayout persistKey values from YAML)
- *   panel.{persistKey}.width
- *   panel.{persistKey}.collapsed
- *
- *   // Page navigation state
- *   page.vfs.lastPath
- *   page.vfs.viewMode
- *   page.media.lastDir
- *   page.media.viewMode
- *
- *   // Global
- *   nav.lastRoute
- *   terminal.height
- *   terminal.open
+ * A change is written locally at once and sent, debounced, as the entries that changed only; the server merges each
+ * entry field by field and leaves every other entry as it was. A refusal (422) is shown to the person through
+ * {@link PREFERENCES_NOTICE}. On load the server's value wins for every entry it has.
  */
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
     private readonly http       = inject(HttpClient);
     private readonly store      = inject(Store);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly errors     = inject(ErrorHandlerService);
+    private readonly notice     = inject(PREFERENCES_NOTICE, { optional: true });
 
     private readonly STORAGE_KEY = 'coolms_ui_prefs';
     private readonly SYNC_DELAY  = 2000; // ms
 
-    private syncSubject = new Subject<Record<string, unknown>>();
+    /** The entries changed since the last send, by id, with the value to send. */
+    private readonly pending = new Map<string, unknown>();
+    private readonly syncSubject = new Subject<void>();
 
     constructor() {
         // Debounced sync to server -- batches rapid changes (e.g. live resize)
         this.syncSubject.pipe(
             debounceTime(this.SYNC_DELAY),
             takeUntilDestroyed(this.destroyRef),
-        ).subscribe(prefs => this.syncToServer(prefs));
+        ).subscribe(() => this.flush());
     }
 
     // -- Core helpers ---------------------------------------------------------
 
-    /**
-     * Write all prefs to localStorage and schedule a debounced server sync.
-     */
-    private save(all: Record<string, unknown>): void {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(all));
-        this.syncSubject.next(all);
+    /** Writes all entries locally, and schedules a debounced send of the entries named. */
+    private save(all: Record<string, unknown>, ...changed: string[]): void {
+        this.write(all);
+        for (const id of changed) {
+            this.pending.set(id, all[id] ?? {});
+        }
+        this.syncSubject.next();
+    }
+
+    private write(all: Record<string, unknown>): void {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(all));
+        } catch {
+            /* storage denied -- the server keeps the entries */
+        }
+    }
+
+    private readLocal(): Record<string, unknown> {
+        try {
+            const raw = localStorage.getItem(this.STORAGE_KEY);
+            const all: unknown = raw ? JSON.parse(raw) : {};
+            return isObject(all) ? all : {};
+        } catch {
+            return {};
+        }
     }
 
     /**
@@ -66,25 +103,24 @@ export class UserPreferencesService {
      * migration on the first read after an upgrade.
      */
     private load(): Record<string, unknown> {
-        try {
-            const raw = localStorage.getItem(this.STORAGE_KEY);
-            const all: Record<string, unknown> = raw ? JSON.parse(raw) : {};
-            return this.migrate(all);
-        } catch {
-            return {};
+        const all = this.readLocal();
+        if (this.migrate(all)) {
+            this.write(all);
         }
+        return all;
     }
 
     /**
-     * One-time migration of legacy flat keys to the new nested naming convention.
-     * Mutates `all` in place and re-persists only when something changed.
+     * Older shapes, moved to today's in place; true when something moved. Each grid gets its own `datagrid:<id>`
+     * entry -- from the nested `grids` entry, or a flat grid key older still -- unless it already has one; a moved
+     * grid's entry is queued to be sent, so the server keeps the same shape.
      */
-    private migrate(all: Record<string, unknown>): Record<string, unknown> {
+    private migrate(all: Record<string, unknown>): boolean {
         let dirty = false;
 
         // terminal_height -> terminal.height
         if (typeof all['terminal_height'] === 'number') {
-            const terminal = (all['terminal'] ?? {}) as Record<string, unknown>;
+            const terminal = (isObject(all['terminal']) ? all['terminal'] : {});
             terminal['height'] = all['terminal_height'];
             all['terminal'] = terminal;
             delete all['terminal_height'];
@@ -93,8 +129,8 @@ export class UserPreferencesService {
 
         // media_view_mode -> page.media.viewMode
         if (typeof all['media_view_mode'] === 'string') {
-            const page  = (all['page']  ?? {}) as Record<string, unknown>;
-            const media = (page['media'] ?? {}) as Record<string, unknown>;
+            const page  = (isObject(all['page']) ? all['page'] : {});
+            const media = (isObject(page['media']) ? page['media'] : {});
             media['viewMode'] = all['media_view_mode'];
             page['media'] = media;
             all['page'] = page;
@@ -103,109 +139,143 @@ export class UserPreferencesService {
         }
 
         // media_collections_panel -> panel.media_panel_left  (matches persistKey in media-library.yaml)
-        if (all['media_collections_panel'] && typeof all['media_collections_panel'] === 'object') {
-            const panel = (all['panel'] ?? {}) as Record<string, unknown>;
+        if (isObject(all['media_collections_panel'])) {
+            const panel = (isObject(all['panel']) ? all['panel'] : {});
             panel['media_panel_left'] = all['media_collections_panel'];
             all['panel'] = panel;
             delete all['media_collections_panel'];
             dirty = true;
         }
 
-        // Normalize namespace arrays to empty objects.
-        // The server serialises empty namespaces as [] (JSON array) rather than {}
-        // because PHP converts empty associative arrays to JSON arrays. Arrays silently
-        // swallow named-property writes and produce "[]" on serialisation, so column/
-        // panel preferences would be lost. Convert once and re-persist.
-        const NAMESPACES = new Set(['grids', 'panel', 'page', 'terminal', 'nav']);
-        for (const ns of NAMESPACES) {
-            if (Array.isArray(all[ns])) {
-                all[ns] = {};
+        // An entry is an object of fields. The server serialises an empty one as [] (PHP writes an empty
+        // associative array as a JSON array), and an array silently swallows named-property writes.
+        for (const id of Object.keys(all)) {
+            if (Array.isArray(all[id])) {
+                all[id] = {};
                 dirty = true;
             }
         }
 
-        // Grid keys: any top-level object with `columns` or `columnWidths` -> grids.{key}
+        const moved: string[] = [];
+        const toEntry = (gridId: string, pref: unknown): void => {
+            const id = datagridEntry(gridId);
+            if (isObject(pref) && !(id in all)) {
+                all[id] = pref;
+                moved.push(id);
+            }
+        };
+
+        // Flat grid keys, older than the nested shape: a top-level object with `columns` or `columnWidths` whose id
+        // is not an entry id (entry ids carry a colon, `admin:mail:panes`).
         for (const key of Object.keys(all)) {
-            if (NAMESPACES.has(key)) continue;
-            const val = all[key];
-            if (val && typeof val === 'object' && !Array.isArray(val)) {
-                const obj = val as Record<string, unknown>;
-                if ('columns' in obj || 'columnWidths' in obj) {
-                    const grids = (all['grids'] ?? {}) as Record<string, unknown>;
-                    grids[key]  = obj;
-                    all['grids'] = grids;
-                    delete all[key];
-                    dirty = true;
-                }
+            if (NAMESPACES.has(key) || key.includes(':') || !isObject(all[key])) continue;
+            const obj = all[key];
+            if ('columns' in obj || 'columnWidths' in obj) {
+                toEntry(key, obj);
+                delete all[key];
+                dirty = true;
             }
         }
 
-        if (dirty) {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(all));
+        // grids.{gridId} -> datagrid:{gridId}
+        if ('grids' in all) {
+            const grids = all['grids'];
+            if (isObject(grids)) {
+                for (const [gridId, pref] of Object.entries(grids)) {
+                    toEntry(gridId, pref);
+                }
+            }
+            delete all['grids'];
+            dirty = true;
         }
 
-        return all;
+        if (moved.length > 0) {
+            for (const id of moved) {
+                this.pending.set(id, all[id]);
+            }
+            this.syncSubject.next();
+        }
+
+        return dirty;
     }
 
     // -- Server sync ----------------------------------------------------------
 
     /**
-     * Seed localStorage from server preferences.
-     * Called after login and on every session restore (page reload).
-     *
-     * Strategy:
-     *  - No local prefs yet (new device / clean install) -> use server prefs as-is.
-     *  - Local prefs already exist -> merge with local taking priority at each
-     *    top-level namespace.  This ensures that locally-persisted state
-     *    (panel widths, last path, etc.) is never overwritten by the stale copy
-     *    that was saved in the auth token at login time.
+     * Takes the server's preferences (GET /auth/me's uiPrefs), after sign-in and on every load: for every entry the
+     * server has, its value wins over the local one; an entry only this browser has is kept. An entry changed here
+     * and not yet sent keeps its local value: it is newer, and on its way. The server's nested `grids` entry gives a
+     * grid its own entry only where neither side has one.
      */
     loadFromServer(uiPrefs: Record<string, unknown>): void {
-        if (Object.keys(uiPrefs).length === 0) return;
-        try {
-            const raw = localStorage.getItem(this.STORAGE_KEY);
-            if (!raw) {
-                // Fresh device -- trust the server entirely
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(uiPrefs));
-            } else {
-                // Local prefs exist -- server is the base, local namespaces win
-                const local  = JSON.parse(raw) as Record<string, unknown>;
-                const merged = { ...uiPrefs, ...local };
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
-            }
-        } catch {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(uiPrefs));
+        if (!isObject(uiPrefs) || Object.keys(uiPrefs).length === 0) return;
+        const all = this.readLocal();
+        const oldGrids = isObject(uiPrefs['grids']) ? { ...uiPrefs['grids'] } : null;
+        for (const [id, value] of Object.entries(uiPrefs)) {
+            if (id === 'grids' || this.pending.has(id)) continue;
+            all[id] = value;
         }
+        if (oldGrids !== null) {
+            // Merged under the local nested entry, if one is still there: either becomes a grid's entry only
+            // where the grid has none.
+            all['grids'] = { ...oldGrids, ...(isObject(all['grids']) ? all['grids'] : {}) };
+        }
+        this.migrate(all);
+        this.write(all);
     }
 
-    private syncToServer(prefs: Record<string, unknown>): void {
+    /** Sends the entries changed since the last send, those only. */
+    private flush(): void {
+        if (this.pending.size === 0) return;
+        const entries = Object.fromEntries(this.pending);
+        this.pending.clear();
+        this.syncToServer(entries);
+    }
+
+    private syncToServer(entries: Record<string, unknown>): void {
         const manifest = this.store.selectSnapshot(AppConfigState.manifest);
         const url      = manifest?.auth?.preferencesUrl;
         if (!url) return;
 
-        this.http.patch(url, { uiPrefs: prefs }, {
+        this.http.patch(url, { uiPrefs: entries }, {
             headers: { 'Content-Type': 'application/merge-patch+json' },
-            // Sent on every navigation, by no one's action.
+            // Sent on the way, by no one's action.
             context: new HttpContext().set(BACKGROUND_REQUEST, true),
         }).subscribe({
-            error: err => console.warn('Preferences sync failed:', err),
+            error: (err: unknown) => this.refused(err, entries),
         });
+    }
+
+    /**
+     * A send that failed. A refusal (422) stored nothing and would be refused again: the person is told, in the
+     * server's words. Any other failure keeps the entries to send with the next change (one changed since is newer).
+     */
+    private refused(err: unknown, entries: Record<string, unknown>): void {
+        if (err instanceof HttpErrorResponse && err.status === 422) {
+            const sentence = `Your preferences could not be saved: ${this.errors.humanize(err)}`;
+            if (this.notice) {
+                this.notice.refused(sentence);
+            } else {
+                console.warn(sentence);
+            }
+            return;
+        }
+        for (const [id, value] of Object.entries(entries)) {
+            if (!this.pending.has(id)) {
+                this.pending.set(id, value);
+            }
+        }
+        console.warn('Preferences sync failed:', err);
     }
 
     // -- Grids ----------------------------------------------------------------
 
     /**
-     * Get stored preferences for a specific grid.
+     * Get stored preferences for a specific grid: its `datagrid:<gridId>` entry, without the fields a reset left
+     * empty; null when it has none.
      */
     getGridPref(gridId: string): DataGridPreference | null {
-        try {
-            const all   = this.load();
-            const grids = all['grids'] as Record<string, unknown> | undefined;
-            if (!grids) return null;
-            return (grids[gridId] as DataGridPreference) ?? null;
-        } catch {
-            return null;
-        }
+        return gridPrefOf(this.load()[datagridEntry(gridId)]);
     }
 
     /**
@@ -231,26 +301,27 @@ export class UserPreferencesService {
     }
 
     /**
-     * Remove all preferences for a specific grid and immediately sync to server.
+     * Remove all preferences for a specific grid, and send at once: the server keeps an entry it was once sent,
+     * so the grid's fields are sent empty (null), which it stores as they come.
      */
     resetGrid(gridId: string): void {
-        const all   = this.load();
-        const grids = (all['grids'] ?? {}) as Record<string, unknown>;
-        delete grids[gridId];
-        all['grids'] = grids;
-        this.save(all);
-        this.syncToServer(all); // immediate sync
+        const id  = datagridEntry(gridId);
+        const all = this.load();
+        delete all[id];
+        this.write(all);
+        this.pending.set(id, { columns: null, columnWidths: null });
+        this.flush();
     }
 
     private updateGrid(
         gridId: string,
         updater: (existing: DataGridPreference) => DataGridPreference,
     ): void {
-        const all   = this.load();
-        const grids = (all['grids'] ?? {}) as Record<string, unknown>;
-        grids[gridId] = updater((grids[gridId] as DataGridPreference) ?? {});
-        all['grids'] = grids;
-        this.save(all);
+        const id  = datagridEntry(gridId);
+        const all = this.load();
+        const entry = isObject(all[id]) ? all[id] : {};
+        all[id] = { ...entry, ...updater(gridPrefOf(entry) ?? {}) };
+        this.save(all, id);
     }
 
     // -- Terminal -------------------------------------------------------------
@@ -269,10 +340,10 @@ export class UserPreferencesService {
      */
     setTerminalHeight(height: number): void {
         const all      = this.load();
-        const terminal = (all['terminal'] ?? {}) as Record<string, unknown>;
+        const terminal = (isObject(all['terminal']) ? all['terminal'] : {});
         terminal['height'] = Math.round(height);
         all['terminal'] = terminal;
-        this.save(all);
+        this.save(all, 'terminal');
     }
 
     // -- Panel ----------------------------------------------------------------
@@ -301,10 +372,10 @@ export class UserPreferencesService {
      */
     setPanelState(key: string, width: number, collapsed: boolean): void {
         const all   = this.load();
-        const panel = (all['panel'] ?? {}) as Record<string, unknown>;
+        const panel = (isObject(all['panel']) ? all['panel'] : {});
         panel[key]  = { width: Math.round(width), collapsed };
         all['panel'] = panel;
-        this.save(all);
+        this.save(all, 'panel');
     }
 
     // -- Page state -----------------------------------------------------------
@@ -328,10 +399,10 @@ export class UserPreferencesService {
      */
     setPageState(pageKey: string, state: Record<string, unknown>): void {
         const all  = this.load();
-        const page = (all['page'] ?? {}) as Record<string, unknown>;
-        page[pageKey] = { ...(page[pageKey] ?? {}), ...state };
+        const page = (isObject(all['page']) ? all['page'] : {});
+        page[pageKey] = { ...(isObject(page[pageKey]) ? page[pageKey] : {}), ...state };
         all['page'] = page;
-        this.save(all);
+        this.save(all, 'page');
     }
 
     // -- Media (legacy pass-through -- kept for compatibility) -----------------

@@ -122,6 +122,127 @@ describe('UserPreferencesService', () => {
         }));
     });
 
+    describe('a failed send that is not a refusal is tried again', () => {
+        const fail = (): void => http.expectOne(URL).flush(null, { status: 503, statusText: 'Unavailable' });
+        const ok = (): void => http.expectOne(URL).flush({});
+
+        beforeEach(() => spyOn(console, 'warn'));
+
+        it('a 503 then a success: the entries go again at 5 s, and once only', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            tick(4999);
+            expect(sent()).withContext('not before 5 s').toEqual([]);
+            tick(1);
+            const again = http.expectOne(URL);
+            expect(again.request.body).toEqual({ uiPrefs: { terminal: { height: 300 } } });
+            again.flush({});
+            tick(600_000);
+            expect(sent()).withContext('nothing more after the success').toEqual([]);
+        }));
+
+        it('repeated failures wait 5 s, 30 s, 120 s, then 120 s again', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            for (const wait of [5_000, 30_000, 120_000, 120_000]) {
+                tick(wait - 1);
+                expect(sent()).withContext(`not before ${wait} ms`).toEqual([]);
+                tick(1);
+                fail();
+            }
+            tick(120_000);
+            ok();
+        }));
+
+        it('a change made while a try again is scheduled goes with the next send', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            prefs.setPanelState('left', 280, false);
+            tick(2000);
+            const next = http.expectOne(URL);
+            expect(next.request.body).toEqual({ uiPrefs: { terminal: { height: 300 }, panel: { left: { width: 280, collapsed: false } } } });
+            next.flush({});
+            tick(600_000);
+            expect(sent()).withContext('the scheduled try again went with it').toEqual([]);
+        }));
+
+        it('goes at once when the browser comes back online', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            tick(1000);
+            window.dispatchEvent(new Event('online'));
+            expect(sent()).toEqual([{ uiPrefs: { terminal: { height: 300 } } }]);
+            tick(600_000);
+            expect(sent()).withContext('the 5 s try again was dropped').toEqual([]);
+        }));
+
+        it('goes at once when the tab is shown again, not when it is hidden', fakeAsync(() => {
+            build();
+            const state = spyOnProperty(document, 'visibilityState').and.returnValue('hidden');
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            document.dispatchEvent(new Event('visibilitychange'));
+            expect(sent()).withContext('hidden').toEqual([]);
+            state.and.returnValue('visible');
+            document.dispatchEvent(new Event('visibilitychange'));
+            expect(sent()).toEqual([{ uiPrefs: { terminal: { height: 300 } } }]);
+            tick(600_000);
+        }));
+
+        it('an online event with nothing waiting sends nothing', fakeAsync(() => {
+            build();
+            window.dispatchEvent(new Event('online'));
+            expect(sent()).toEqual([]);
+        }));
+
+        it('a 422 is never tried again', fakeAsync(() => {
+            build();
+            prefs.setColumns('users', ['email']);
+            tick(2000);
+            http.expectOne(URL).flush({ detail: 'too big' }, { status: 422, statusText: 'Unprocessable Content' });
+            tick(600_000);
+            window.dispatchEvent(new Event('online'));
+            expect(sent()).toEqual([]);
+        }));
+
+        it('after a success, the next failure waits 5 s again', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            tick(5000);
+            fail();
+            tick(30_000);
+            ok();
+            prefs.setTerminalHeight(310);
+            tick(2000);
+            fail();
+            tick(4999);
+            expect(sent()).withContext('not before 5 s').toEqual([]);
+            tick(1);
+            expect(sent()).toEqual([{ uiPrefs: { terminal: { height: 310 } } }]);
+        }));
+
+        it('a scheduled try again is dropped when the service is destroyed', fakeAsync(() => {
+            build();
+            prefs.setTerminalHeight(300);
+            tick(2000);
+            fail();
+            TestBed.resetTestingModule();
+            tick(600_000);
+            expect(http.match(() => true)).toEqual([]);
+        }));
+    });
+
     describe('a refusal (422)', () => {
         const refusal = {
             type: '/errors/identity/preferences-refused',

@@ -1,8 +1,9 @@
+import { DOCUMENT } from '@angular/common';
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Store } from '@ngxs/store';
-import { Subject, debounceTime } from 'rxjs';
+import { Subject, debounceTime, filter, fromEvent, merge } from 'rxjs';
 import { AppConfigState } from '../state/app-config.state';
 import { BACKGROUND_REQUEST } from '../auth/elevation.service';
 import { ErrorHandlerService } from '../errors/error-handler.service';
@@ -44,7 +45,8 @@ function gridPrefOf(entry: unknown): DataGridPreference | null {
  *
  * A change is written locally at once and sent, debounced, as the entries that changed only; the server merges each
  * entry field by field and leaves every other entry as it was. A refusal (422) is shown to the person through
- * {@link PREFERENCES_NOTICE}. On load the server's value wins for every entry it has.
+ * {@link PREFERENCES_NOTICE}; any other failure is tried again after 5 s, 30 s, then every 2 min, and at once when
+ * the browser comes back online or the tab is shown again. On load the server's value wins for every entry it has.
  */
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
@@ -53,13 +55,20 @@ export class UserPreferencesService {
     private readonly destroyRef = inject(DestroyRef);
     private readonly errors     = inject(ErrorHandlerService);
     private readonly notice     = inject(PREFERENCES_NOTICE, { optional: true });
+    private readonly document   = inject(DOCUMENT);
 
     private readonly STORAGE_KEY = 'coolms_ui_prefs';
     private readonly SYNC_DELAY  = 2000; // ms
+    /** The waits before each try again after a failed send, in ms; the last one repeats. */
+    private readonly RETRY_DELAYS = [5_000, 30_000, 120_000];
 
     /** The entries changed since the last send, by id, with the value to send. */
     private readonly pending = new Map<string, unknown>();
     private readonly syncSubject = new Subject<void>();
+    /** Failed sends since the last one that succeeded; picks the wait before the next try. */
+    private failures = 0;
+    /** The one try again scheduled after a failed send, if any. */
+    private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         // Debounced sync to server -- batches rapid changes (e.g. live resize)
@@ -67,6 +76,21 @@ export class UserPreferencesService {
             debounceTime(this.SYNC_DELAY),
             takeUntilDestroyed(this.destroyRef),
         ).subscribe(() => this.flush());
+
+        // A scheduled try again goes at once when the browser is back online or the tab is shown again.
+        const win = this.document.defaultView;
+        if (win) {
+            merge(
+                fromEvent(win, 'online'),
+                fromEvent(this.document, 'visibilitychange').pipe(
+                    filter(() => this.document.visibilityState === 'visible'),
+                ),
+            ).pipe(
+                filter(() => this.retryTimer !== null),
+                takeUntilDestroyed(this.destroyRef),
+            ).subscribe(() => this.flush());
+        }
+        this.destroyRef.onDestroy(() => this.cancelRetry());
     }
 
     // -- Core helpers ---------------------------------------------------------
@@ -226,6 +250,8 @@ export class UserPreferencesService {
 
     /** Sends the entries changed since the last send, those only. */
     private flush(): void {
+        // This send carries every pending entry, so a scheduled try again has nothing left of its own.
+        this.cancelRetry();
         if (this.pending.size === 0) return;
         const entries = Object.fromEntries(this.pending);
         this.pending.clear();
@@ -242,13 +268,32 @@ export class UserPreferencesService {
             // Sent on the way, by no one's action.
             context: new HttpContext().set(BACKGROUND_REQUEST, true),
         }).subscribe({
+            next: () => { this.failures = 0; },
             error: (err: unknown) => this.refused(err, entries),
         });
     }
 
+    /** Schedules the one try again of the pending entries, after the wait the failures so far call for. */
+    private scheduleRetry(): void {
+        if (this.retryTimer !== null) return;
+        const delay = this.RETRY_DELAYS[Math.min(this.failures, this.RETRY_DELAYS.length) - 1];
+        this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            this.flush();
+        }, delay);
+    }
+
+    private cancelRetry(): void {
+        if (this.retryTimer !== null) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+        }
+    }
+
     /**
      * A send that failed. A refusal (422) stored nothing and would be refused again: the person is told, in the
-     * server's words. Any other failure keeps the entries to send with the next change (one changed since is newer).
+     * server's words. Any other failure keeps the entries (one changed since is newer) and schedules one try again; a
+     * change made meanwhile goes with the next send.
      */
     private refused(err: unknown, entries: Record<string, unknown>): void {
         if (err instanceof HttpErrorResponse && err.status === 422) {
@@ -265,6 +310,8 @@ export class UserPreferencesService {
                 this.pending.set(id, value);
             }
         }
+        this.failures++;
+        this.scheduleRetry();
         console.warn('Preferences sync failed:', err);
     }
 

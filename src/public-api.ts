@@ -67,6 +67,7 @@ export * from './theme/theme.service';
 export * from './loader/cms-loader.component';
 export * from './services/user-preferences.service';
 export * from './services/user-preferences.types';
+export * from './services/preferences-notice.port';
 export * from './sidebar/sidebar-state.service';
 export * from './entity-search/entity-search.service';
 

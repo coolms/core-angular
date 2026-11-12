@@ -179,13 +179,22 @@ export class AppInitService {
         }
     }
 
-    /** GET an authed endpoint with an explicit Bearer header, bypassing the interceptor: true, or what refused it. */
+    /**
+     * GET /auth/me with an explicit Bearer header, bypassing the interceptor: true, or what refused it. The answer's
+     * uiPrefs are the server's preferences as they are now, and win over the local ones for every entry they hold.
+     */
     private probe(url: string, token: string | null): Promise<unknown> {
         return firstValueFrom(
-            this.http.get(url, {
+            this.http.get<{ uiPrefs?: unknown } | null>(url, {
                 context: new HttpContext().set(BYPASS_AUTH, true),
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             }).pipe(
+                tap(me => {
+                    const uiPrefs = me?.uiPrefs;
+                    if (uiPrefs !== null && typeof uiPrefs === 'object' && !Array.isArray(uiPrefs)) {
+                        this.prefs.loadFromServer(uiPrefs as Record<string, unknown>);
+                    }
+                }),
                 map((): true => true),
                 catchError((error: unknown) => of(error)),
             ),

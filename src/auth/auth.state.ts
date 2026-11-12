@@ -79,10 +79,8 @@ export class AuthState {
             // and force a full re-login unnecessarily.
             if (state.accessToken || state.refreshToken) {
                 ctx.setState(state);
-                // Seed preferences from previously stored user (covers page-reload case)
-                if (state.user?.uiPrefs) {
-                    this.prefs.loadFromServer(state.user.uiPrefs);
-                }
+                // No preferences from the user stored at sign-in: that copy is older than the local ones. The
+                // session check on load (AppInitService) reads the server's as they are now.
             } else {
                 localStorage.removeItem(STORAGE_KEY);
             }

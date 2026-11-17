@@ -9,7 +9,21 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+## 2.0.0-alpha.7 - 2026-11-17
+
 ### Changed
+
+- **A failure says the server's words only when the server declared the problem.** `ErrorHandlerService.humanize()`
+  now follows the components contract's rule: a problem with a declared type (anything but `about:blank` or a
+  framework's own `/errors/5NN`) says its `detail` as given, whatever the status, or "Not available right now" when it
+  gives none; a validation refusal (422 with `violations`) says its first field message; anything else, an undeclared
+  problem, a network failure or a thrown error, says "Something went wrong. Try again." It no longer words a status
+  ("Resource not found.", "Session expired. Please sign in again." and the others are gone) and no longer reads
+  `hydra:description` or `message`. A caller that showed those sentences now shows the server's or the generic one.
+- **Interface preferences are saved one entry at a time.** `UserPreferencesService` sends each changed entry with all
+  of its fields, as the server now keeps them, and reads the server's 422 (`/errors/identity/preferences-refused`)
+  for an entry it cannot store. A save that failed for any other reason (offline, a 5xx, a timeout) is sent again,
+  instead of waiting for the next change.
 
 - **Only a refusal of entry signs out.** The server answers a token sent to the other interface with 403
   `/errors/identity/wrong-interface` (`WRONG_INTERFACE`), and keeps `/errors/identity/audience-not-granted` for an
@@ -41,10 +55,25 @@ predate this file would be a worse record than not having them.
 
 ### Added
 
+- **The shared rule for a failure's words**, exported from `errors/problem-words`: `refusalWords(error)`,
+  `declaredProblemOf`, `declaredTypeOf`, `problemOf`, `isRefusal`, `sentenceOf`, and the two sentences
+  `SOMETHING_WENT_WRONG` and `NOT_AVAILABLE`, so a host reads the rule from one place. The elevation service names the
+  refusal types a prompt acts on: `ELEVATION_CODE_REQUIRED_TYPE` and `ELEVATION_RETRY_TYPES`.
+- **`ApiManifest.modules`**: the modules' own blocks of the manifest, by module name, each a record the client reads
+  by the keys it knows; `{}` when no module has a block.
+- **A sign-in can name its application's audience.** `AUTH_AUDIENCE` (default `null`) is the application a sign-in is
+  for, typed `AuthAudience` (`'admin' | 'workspace'`); when provided, `IdentityApiClient.login()` sends it as
+  `audience`. The admin reads the two refusals of entry by audience, `/errors/identity/audience-not-granted` and
+  `/errors/identity/audience-required`.
 - **The identity manifest names the signed-in sessions' addresses.**
   `sessionsUrl` lists the live sign-ins; `sessionUrl` (`{sessionId}`) ends
   one; `userSessionsUrl` (`{id}`) ends every sign-in of one account. All
   three are optional: a server that does not send them has no sessions page.
+
+### Fixed
+
+- **The store needs no `'unsafe-eval'`.** `provideConsole` sets up NGXS with `strictContentSecurityPolicy`, so a
+  selector's path is read with its plain getter, not one built with `new Function`.
 
 ## 2.0.0-alpha.6 - 2026-10-22
 

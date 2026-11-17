@@ -59,6 +59,7 @@ export * from './state/app-config.state';
 
 // -- Cross-cutting services ---------------------------------------------------
 export * from './errors/error-handler.service';
+export * from './errors/problem-words';
 export * from './theme/theme.service';
 // The platform's loader mark. It lives here rather than in the UI kit
 // because the kit is not the lowest layer that needs it: the editor sits

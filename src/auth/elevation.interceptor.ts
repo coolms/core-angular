@@ -12,7 +12,7 @@ const READS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
  * A refusal for want of elevation is a 403 the server stamps `X-Elevation-Required`
  * where its gate refused a member who has not elevated ({@link isElevationRefusal}).
  *
- * What it does with a stamped 403 (decided 2026-10-20 for a person's write):
+ * What it does with a stamped 403:
  * - On a write a person made (POST, PUT, PATCH, DELETE without {@link BACKGROUND_REQUEST}):
  *   the prompt opens THERE, above whatever the person is in -- an edit dialog stays open
  *   beneath it with its input -- and the request is HELD. If the person elevates, it is
@@ -27,13 +27,12 @@ const READS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
  *   "needs an elevated session" with an Elevate button, or the feature hidden.
  * - On a background request: nothing. Nobody is waiting on it.
  *
- * !! Why reads and background requests still open nothing. Until 2026-10-08 any stamped 403
- * opened the prompt, so the setup reads of almost every console page, and a realtime token at
- * every load, opened it for an administrator who had not elevated: 13 of 15 pages on a menu
- * click, 15 of 15 on a reload (measured). From then until 2026-10-20 a person's write opened
- * nothing either, only a toast -- which, with a dialog open, rendered under it, so the edit had
- * to be thrown away to elevate (measured on the served admin, Edit Node). A person's write is
- * the one refusal somebody is waiting on, which is why it is the one that asks.
+ * !! Why reads and background requests open nothing. Were any stamped 403 to open the prompt,
+ * the setup reads of almost every console page, and a realtime token at every load, would open
+ * it for an administrator who has not elevated (13 of 15 pages on a menu click, 15 of 15 on a
+ * reload, measured). Were a person's write to open nothing but a toast, the toast would render
+ * under an open dialog, and the edit would have to be thrown away to elevate. A person's write
+ * is the one refusal somebody is waiting on, which is why it is the one that asks.
  *
  * The elevation endpoint's own calls carry {@link BYPASS_ELEVATION}: a wrong password is a
  * 403 and is not a refused action. A stamped 403 from anywhere but this API is ignored:

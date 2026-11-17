@@ -24,7 +24,7 @@ export interface CentrifugoConnectionTokenDto {
      * The code the server closes this connection with when the caller's session
      * ended (a sign-out everywhere, a password change, a deactivation). On it the
      * client signs out and ends its calls at once, without reconnecting or waiting
-     * for a 401 (2026-09-26). Absent from a server older than that.
+     * for a 401. Absent from an older server.
      */
     sessionEndedCode?: number;
 }
@@ -55,20 +55,17 @@ export interface CentrifugoSubscriptionTokenDto {
  * `ApiService` keeps its identical signatures and delegates here, so nothing
  * calling it had to change.
  *
- * !! Access first, then realtime (Dmitry, 2026-09-28): "The console opens a realtime
- * connection before the access check. Reverse the order ... A refused account opens no
- * socket." The socket cannot open without the connection token, and anything may ask for
- * one early -- the ring subscription is built at app init and asks as soon as a user is
+ * !! Access first, then realtime: a refused account opens no socket. The socket cannot
+ * open without the connection token, and anything may ask for one early -- the ring subscription is built at app init and asks as soon as a user is
  * set, before the guard's answer is in. So the token waits for the console's answer (the
  * guard's own request, not a second one) and a refused sign-in gets none: no request, no
  * socket. A failure to ask is not a refusal, as at the guard.
  *
- * Since 2026-10-06 the connection token is every signed-in account's (Dmitry: "The connection
- * token only opens a socket; each channel is authorized when it is subscribed to"), and a
- * current server answers the admin manifest to every signed-in account, so no
- * sign-in is refused and every one gets its token; each subscription is then decided by its
- * channel. The wait stays for a server from before that, where a refused sign-in still opens
- * no socket.
+ * The connection token is every signed-in account's (it only opens a socket; each channel is
+ * authorized when it is subscribed to), and a current server answers the admin manifest to
+ * every signed-in account, so no sign-in is refused and every one gets its token; each
+ * subscription is then decided by its channel. The wait stays for an older server, where a
+ * refused sign-in still opens no socket.
  */
 @Injectable({ providedIn: 'root' })
 export class RealtimeTokenClient {

@@ -94,8 +94,8 @@ export class ConsoleActivation {
  * recognises the URL while the initializer is still fetching `/theme/config`
  * (the two run as parallel initializers), and a synchronous read then found
  * no module installed, so every pasted module URL fell to the wildcard and
- * landed on the dashboard (measured 2026-09-22: no chunk requested for the
- * mount, the dashboard's instead). `ready$` is what the auth guard waits on
+ * landed on the dashboard (no chunk requested for the mount, the dashboard's
+ * instead). `ready$` is what the auth guard waits on
  * too, and it fires whether or not the config fetch succeeded.
  *
  * !! Then the console's own manifest, when someone is signed in: `ui.modules` is

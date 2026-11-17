@@ -126,7 +126,7 @@ export class AuthState {
     }
 
     /**
-     * Sub-phase Y -- expose the access-token expiry timestamp so
+     * The access token's expiry timestamp, so
      * preemptive-refresh callers (e.g., Centrifuge getToken
      * callbacks) can decide whether to rotate before issuing the
      * next protected request, instead of relying on the

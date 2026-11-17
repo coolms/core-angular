@@ -14,7 +14,7 @@ class ConsoleStub {}
 /**
  * The sign-in page shows its answer when it arrives, not when the person next types.
  *
- * Measured in a browser on the served admin (2026-09-28): after a wrong password, and after
+ * Measured in a browser on the served admin: after a wrong password, and after
  * a sign-in the console refused (the guard signs it out and sends it back with
  * ?reason=no-console-access), the page kept saying "Signing in..." until a character was
  * typed. Angular 22 renders a component that names no strategy as OnPush, and the answer

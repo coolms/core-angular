@@ -91,7 +91,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                     // With the token that was refused, so the coordinator
                     // refreshes rather than hand the same dead token back
                     // because its expiry still looks fresh (a session ended
-                    // on the server went unnoticed until then, 2026-09-26).
+                    // on the server would otherwise go unnoticed).
                     return coordinator.refresh(refreshToken, token).pipe(
                         switchMap(newToken =>
                             next(req.clone({ setHeaders: { Authorization: `Bearer ${newToken}` } })),

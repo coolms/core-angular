@@ -7,7 +7,7 @@ import { ConsoleAccessService, type ConsoleAccess } from '../bootstrap/console-a
 import { RealtimeTokenClient } from './realtime-token.client';
 
 /**
- * Access first, then realtime (Dmitry, 2026-09-28): the realtime socket opens with the
+ * Access first, then realtime: the realtime socket opens with the
  * connection token, so the token is not asked for until the console has answered, and a
  * refused sign-in gets none. Measured before: a refused account opened a realtime socket
  * before the console's 403 signed it out.

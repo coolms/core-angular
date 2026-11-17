@@ -16,9 +16,9 @@ import { SetTokens } from './auth.actions';
 /**
  * A 401 on a token whose expiry still looks fresh is the server saying this
  * session is over (a sign-out everywhere from another device), and the
- * interceptor must let the refresh find out (2026-09-26). It hands the refused
- * token to the coordinator; until then the coordinator handed that same token
- * back and the request was retried with it, forever 401, never signed out.
+ * interceptor must let the refresh find out. It hands the refused token to the
+ * coordinator; otherwise the coordinator would hand that same token back and the
+ * request would be retried with it, forever 401, never signed out.
  */
 describe('authInterceptor -- a refused token', () => {
     const KEY = 'coolms_token';

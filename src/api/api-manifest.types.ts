@@ -258,7 +258,7 @@ export interface ViewerApiManifest {
  * fallback floor for anonymous / pre-login rendering: timezone, date /
  * time format (CLDR tokens) and week start come from the deployment's
  * config, not an FE-hardcoded Western default. `locale` is the default
- * locale, previously absent from the manifest.
+ * locale.
  */
 export interface PlatformDefaults {
     readonly locale:     string;
@@ -328,9 +328,8 @@ export interface ApiManifest {
 
 /**
  * GET /api/v1/admin/manifest -- the admin's endpoint map, answered to every signed-in account
- * since 2026-10-06 (no host groups: each call it names is decided by its own route). A server
- * from before that answers at /api/v1/console/manifest, to the console group only. Read once
- * signed in.
+ * (each call it names is decided by its own route). An older server answers at
+ * /api/v1/console/manifest, to the console group only. Read once signed in.
  */
 export interface ConsoleManifestResponse {
     readonly manifest: ApiManifest;

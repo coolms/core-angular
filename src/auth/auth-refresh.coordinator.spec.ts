@@ -13,7 +13,7 @@ import { AuthState } from './auth.state';
 import { SetTokens } from './auth.actions';
 
 /**
- * A token the server refused is refreshed, not handed back (2026-09-26).
+ * A token the server refused is refreshed, not handed back.
  *
  * The lock body used to return the cached access token whenever its expiry
  * looked fresh -- which a REVOKED token's does. A session ended on the server

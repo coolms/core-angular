@@ -168,11 +168,10 @@ export class AppInitService {
             // 401 -> coordinator already dispatched Logout; transient -> session kept.
             return;
         }
-        // Refresh resolved. Handed the refused token, the coordinator no longer
-        // returns that same token (2026-09-26) -- it did when its stored expiry
-        // looked fresh, which a revoked token's does. The re-probe stays: a
-        // second rejection means the session is genuinely gone, whatever path
-        // the coordinator took.
+        // Refresh resolved. Handed the refused token, the coordinator never
+        // returns that same token, even when its stored expiry looks fresh, as
+        // a revoked token's does. The re-probe stays: a second rejection means
+        // the session is genuinely gone, whatever path the coordinator took.
         const again = await this.probe(meUrl, refreshedToken);
         if (true !== again && sessionEndsOn(again)) {
             this.store.dispatch(new Logout());

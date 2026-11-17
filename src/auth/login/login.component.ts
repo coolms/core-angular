@@ -23,9 +23,9 @@ export class LoginComponent {
     // this one names none. So a plain field set from an asynchronous answer -- a wrong
     // password, or the console's refusal the guard sends back -- was set and never drawn: the
     // page said "Signing in..." until the person typed a character, which marked the view dirty
-    // (measured in a browser on the served admin, 2026-09-28). A signal marks it dirty itself.
-    // The zone was blamed first (core-angular#21) and running the answers inside it changed
-    // nothing on the served admin: it re-ran change detection, which skipped this clean view.
+    // (measured in a browser on the served admin). A signal marks it dirty itself. Running the
+    // answers inside the zone changes nothing: it re-runs change detection, which skips this
+    // clean view.
     readonly loading = signal(false);
     readonly error   = signal<string | null>(null);
 

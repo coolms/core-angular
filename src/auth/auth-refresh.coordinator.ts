@@ -46,9 +46,9 @@ interface SharedTokens {
  * CORS, timeouts) propagate without clearing the session so a
  * momentary refresh failure does not kill a valid login.
  *
- * A token the server REFUSED (2026-09-26). A caller answering a 401
- * passes the access token that was refused. Until then the lock body
- * handed back the cached token whenever its expiry looked fresh --
+ * A token the server REFUSED. A caller answering a 401 passes the
+ * access token that was refused. Without it the lock body would hand
+ * back the cached token whenever its expiry looked fresh --
  * which a revoked token's does: a session ended on the server (a
  * sign-out everywhere from another device, a password change) was
  * retried with the same dead token and never refreshed, so the client

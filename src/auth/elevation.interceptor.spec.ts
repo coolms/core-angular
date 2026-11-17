@@ -11,8 +11,8 @@ import { ELEVATION_ACTION, ELEVATION_NOTICE, ELEVATION_PROMPT, type ElevationPro
 
 /**
  * A write a person made that the server refuses for want of elevation opens the prompt THERE, and is sent once more
- * when they elevate (decided 2026-10-20) -- the edit they were in stays open beneath the prompt, and the save
- * completes. Nothing a page makes as it loads, and nothing in the background, opens it (decided 2026-10-08).
+ * when they elevate -- the edit they were in stays open beneath the prompt, and the save completes. Nothing a page
+ * makes as it loads, and nothing in the background, opens it.
  *
  * Coverage:
  *   1. A stamped 403 on a read, or on a background write, opens nothing and tells nothing.

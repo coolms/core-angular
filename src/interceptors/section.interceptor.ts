@@ -3,7 +3,7 @@ import { type HttpInterceptorFn } from '@angular/common/http';
 import { CURRENT_SECTION } from '../section/current-section.port';
 
 /**
- * Phase H7 -- admin Site Selector.
+ * The admin's Site Selector.
  *
  * Stamps `X-CoolMS-Section: <slug>` on outgoing `/api/v1/*` requests when
  * the admin has picked a section from the Site Selector dropdown. The backend

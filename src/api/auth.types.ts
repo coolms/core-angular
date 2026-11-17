@@ -5,8 +5,7 @@ import type { DataGridPreferences } from '../services/user-preferences.types';
  *
  * They live in core because core runs the session: the NGXS auth state, the
  * refresh coordinator and the cross-tab sync are all here, and all three name
- * these shapes. They used to be declared inside the admin's `ApiService`, which
- * meant core imported a 2410-line client to read two interfaces.
+ * these shapes, so core needs no import of the admin's `ApiService` to read them.
  *
  * `ApiService` re-exports them from its own module, so the feature files that
  * import `UserDto` from there are untouched.

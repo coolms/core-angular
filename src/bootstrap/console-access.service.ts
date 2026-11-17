@@ -23,13 +23,12 @@ interface Asked {
  * Whether the signed-in account may use the console, and the console's endpoint
  * map when it may.
  *
- * The server decides: `GET /api/v1/admin/manifest` answers the map. Since 2026-10-06
- * (Dmitry: "no host groups"; access is decided by module groups alone) it answers every
- * signed-in account: the map grants nothing, each call it names is decided by its own
- * route, and an account in no group sees the admin with an empty menu. A server from
- * before that answers only at `/api/v1/console/manifest`, to the `console` group, and
- * 403 to anyone else -- there a refused sign-in is still signed out; this asks the new
- * address first and the old one only on its 404. Only a refusal by type (`audience-not-granted`) is a refusal: a
+ * The server decides: `GET /api/v1/admin/manifest` answers the map to every signed-in
+ * account (access is decided by module groups alone): the map grants nothing, each call it
+ * names is decided by its own route, and an account in no group sees the admin with an
+ * empty menu. An older server answers only at `/api/v1/console/manifest`, to the `console`
+ * group, and 403 to anyone else -- there a refused sign-in is still signed out; this asks
+ * the current address first and the older one only on its 404. Only a refusal by type (`audience-not-granted`) is a refusal: a
  * bare 403 from such a server, or a token for the other interface, is no answer. The public theme config
  * read before sign-in carries only what the sign-in page needs; the rest arrives
  * here, once per sign-in, and is merged into the app config key by key: a key the
@@ -54,7 +53,7 @@ export class ConsoleAccessService {
     /** The admin manifest's URL: fixed, like the theme config's, because nothing is known before it. */
     static readonly URL = '/api/v1/admin/manifest';
 
-    /** The address before 2026-10-06, asked only when a server older than that answers 404 at {@link URL}. */
+    /** An older server's address, asked only when the server answers 404 at {@link URL}. */
     static readonly LEGACY_URL = '/api/v1/console/manifest';
 
     /** The login page's query parameter value for "signed out: no console access". */

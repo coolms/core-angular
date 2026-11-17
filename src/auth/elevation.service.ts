@@ -82,6 +82,12 @@ export const BACKGROUND_REQUEST = new HttpContextToken<boolean>(() => false);
  */
 export const ELEVATION_REQUIRED_PROBLEM_TYPE = '/errors/elevation-required';
 
+/** The elevation refusal that asks for the authenticator's code: the password was right. */
+export const ELEVATION_CODE_REQUIRED_TYPE = '/errors/elevation/code-required';
+
+/** The elevation refusals that let the person try once more: a wrong password, a wrong or already used code. */
+export const ELEVATION_RETRY_TYPES: readonly string[] = ['/errors/elevation/wrong-password', '/errors/elevation/wrong-code'];
+
 /**
  * Whether a failed request was refused for want of elevation: a 403 carrying
  * the server's stamp -- its problem type, or the header. The one test every

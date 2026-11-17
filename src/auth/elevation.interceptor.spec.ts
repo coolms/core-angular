@@ -65,7 +65,10 @@ describe('elevationInterceptor', () => {
 
     /** A 403 the server stamped: refused by the named gate for want of elevation. */
     const refuse = (url: string, detail = "Permission denied: cannot write '/docs/a.md'", gate = 'vfs.permission'): void => {
-        httpMock.expectOne(url).flush({ detail }, { status: 403, statusText: 'Forbidden', headers: { 'X-Elevation-Required': gate } });
+        httpMock.expectOne(url).flush(
+            { type: '/errors/elevation-required', detail },
+            { status: 403, statusText: 'Forbidden', headers: { 'X-Elevation-Required': gate } },
+        );
     };
 
     /** Subscribes, and holds what the caller receives: the answer's body, or the error's status. */
@@ -107,11 +110,11 @@ describe('elevationInterceptor', () => {
         setup();
         const out = outcomeOf(http.patch('/api/v1/navi/nodes/0192f0a1-1111-7000-8000-000000000001', { title: 'Home' }));
 
-        refuse('/api/v1/navi/nodes/0192f0a1-1111-7000-8000-000000000001', 'Access Denied.', 'identity.administrator_role');
+        refuse('/api/v1/navi/nodes/0192f0a1-1111-7000-8000-000000000001', 'Said by the server.', 'identity.administrator_role');
         httpMock.expectOne(ELEVATION).flush(state(false));
 
         expect(opened.length).toBe(1);
-        expect(opened[0].refusal).toBe('This needs an elevated session.');
+        expect(opened[0].refusal).toBe('Said by the server.');
         expect(opened[0].action).toBe('Saving navi nodes');
         // Held, then sent once more -- and the caller receives the repeat's answer, not the 403.
         expect(out.status).toBeUndefined();

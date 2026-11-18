@@ -160,6 +160,33 @@ export class ElevationService {
      */
     readonly changes$ = new Subject<ElevationChange>();
 
+    private readonly retriesWaiting = signal(0);
+
+    /**
+     * How many refused writes wait to be sent again: each is counted from the moment its refusal is taken up, before
+     * any prompt opens, until its repeat has answered or the person declined. A view that reloads after a grant waits
+     * for 0, so the reload never cancels a repeat in flight.
+     */
+    readonly retriesPending = this.retriesWaiting.asReadonly();
+
+    /** Each time the last refused write waiting for its repeat stops waiting: `retriesPending` has come back to 0. */
+    readonly retriesSettled$ = new Subject<void>();
+
+    /** Counts one refused write as waiting for its repeat; the function returned ends that count, once. */
+    holdForRetry(): () => void {
+        this.retriesWaiting.update(n => n + 1);
+        let held = true;
+        return () => {
+            if (held) {
+                held = false;
+                this.retriesWaiting.update(n => n - 1);
+                if (this.retriesWaiting() === 0) {
+                    this.retriesSettled$.next();
+                }
+            }
+        };
+    }
+
     private expiryTimer: ReturnType<typeof setTimeout> | null = null;
     private pendingPrompt: Observable<boolean> | null = null;
     private expiryAnnouncePending = false;

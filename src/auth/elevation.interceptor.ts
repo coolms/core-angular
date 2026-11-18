@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { type HttpInterceptorFn, type HttpRequest } from '@angular/common/http';
-import { catchError, of, switchMap, throwError } from 'rxjs';
+import { catchError, finalize, of, switchMap, throwError } from 'rxjs';
 import { ELEVATION_ACTION, ELEVATION_NOTICE } from './elevation-prompt.port';
 import { BACKGROUND_REQUEST, BYPASS_ELEVATION, ElevationService, isElevationRefusal } from './elevation.service';
 import { ErrorHandlerService } from '../errors/error-handler.service';
@@ -66,10 +66,12 @@ export const elevationInterceptor: HttpInterceptorFn = (req, next) => {
                 return decline();
             }
 
+            const release = elevation.holdForRetry();
             return elevation.refresh().pipe(
                 switchMap(state => state.elevated ? of(true) : elevation.requestElevation({ state, refusal, action })),
                 catchError(() => of(false)),
                 switchMap(granted => granted ? next(req) : decline()),
+                finalize(release),
             );
         }),
     );

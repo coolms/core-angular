@@ -6,7 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Store } from '@ngxs/store';
 import { type Observable, of } from 'rxjs';
 import { actionOf, elevationInterceptor } from './elevation.interceptor';
-import { BACKGROUND_REQUEST, BYPASS_ELEVATION } from './elevation.service';
+import { BACKGROUND_REQUEST, BYPASS_ELEVATION, ElevationService } from './elevation.service';
 import { ELEVATION_ACTION, ELEVATION_NOTICE, ELEVATION_PROMPT, type ElevationPromptRequest } from './elevation-prompt.port';
 
 /**
@@ -24,6 +24,8 @@ import { ELEVATION_ACTION, ELEVATION_NOTICE, ELEVATION_PROMPT, type ElevationPro
  *   6. With no prompt bound, the notice is told at once and the caller receives the 403.
  *   7. A 403 without the stamp, a stamp from another origin, and the elevation endpoint's own 403 do nothing.
  *   8. The action: what the caller named, or the verb and the resource the URL names.
+ *   9. A refused write waits for its repeat from before the prompt opens until the repeat answers, or the decline:
+ *      what a view reloading after a grant waits for.
  */
 describe('elevationInterceptor', () => {
     let http: HttpClient;
@@ -123,6 +125,41 @@ describe('elevationInterceptor', () => {
         repeat.flush({ id: 'n1', title: 'Home' });
         expect(out.body).toEqual({ id: 'n1', title: 'Home' });
         expect(told).toEqual([]);
+    });
+
+    it('counts a refused write as waiting from before the prompt until its repeat answers', () => {
+        setup();
+        const elevation = TestBed.inject(ElevationService);
+        const url = '/api/v1/navi/nodes/0192f0a1-1111-7000-8000-000000000002';
+        const out = outcomeOf(http.patch(url, { title: 'Home' }));
+        expect(elevation.retriesPending()).toBe(0);
+
+        refuse(url, 'Said by the server.', 'identity.administrator_role');
+        expect(elevation.retriesPending()).toBe(1);
+        httpMock.expectOne(ELEVATION).flush(state(false));
+
+        expect(opened.length).toBe(1);
+        expect(elevation.retriesPending()).toBe(1);
+        let settled = 0;
+        elevation.retriesSettled$.subscribe(() => settled++);
+        httpMock.expectOne(url).flush({ id: 'n2' });
+        expect(out.body).toEqual({ id: 'n2' });
+        expect(elevation.retriesPending()).toBe(0);
+        expect(settled).toBe(1);
+    });
+
+    it('stops counting a refused write once the person declines', () => {
+        setup();
+        grant = false;
+        const elevation = TestBed.inject(ElevationService);
+        const out = outcomeOf(http.delete('/api/v1/vfs/nodes?path=/docs/c.md'));
+
+        refuse('/api/v1/vfs/nodes?path=/docs/c.md');
+        expect(elevation.retriesPending()).toBe(1);
+        httpMock.expectOne(ELEVATION).flush(state(false));
+
+        expect(out.status).toBe(403);
+        expect(elevation.retriesPending()).toBe(0);
     });
 
     it('tells the notice, naming the action, and hands back the 403 when the person declines', () => {

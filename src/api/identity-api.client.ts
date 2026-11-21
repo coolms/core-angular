@@ -8,6 +8,22 @@ import { AUTH_AUDIENCE } from './auth-audience';
 import type { ApiManifest } from './api-manifest.types';
 import type { TokenResponse, UserDto } from './auth.types';
 
+/** One declared setting as the server reads it for the person: the value in force, and what they set themselves. */
+export interface DeclaredSettingKey {
+    readonly key: string;
+    /** The value in force: the person's own, else the installation's. */
+    readonly value: unknown;
+    /** What the person set themselves; null when they set nothing and the installation's value applies. */
+    readonly own: unknown;
+    readonly locked: boolean;
+}
+
+/** One section of the person's declared settings. */
+export interface DeclaredSettingsSection {
+    readonly section: string;
+    readonly keys: ReadonlyArray<DeclaredSettingKey>;
+}
+
 /**
  * The identity endpoints core owns: the session lifecycle, plus the settings
  * read at boot.
@@ -83,5 +99,18 @@ export class IdentityApiClient {
         this.settingsRead$ = read$;
 
         return read$;
+    }
+
+    /**
+     * The person's settings as declared: each section's keys with the value in force and the person's own (null when
+     * they set none). `host` picks the sections a host reads (`console` for the admin); none gives every section.
+     */
+    getDeclaredSettings(host?: string): Observable<ReadonlyArray<DeclaredSettingsSection>> {
+        const query = host === undefined ? '' : `?host=${encodeURIComponent(host)}`;
+
+        return this.http.get<ReadonlyArray<DeclaredSettingsSection>>(
+            `${this.manifest.identity!.settingsUrl}/declared${query}`,
+            { headers: { Accept: 'application/json' } },
+        );
     }
 }

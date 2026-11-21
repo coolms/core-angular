@@ -9,6 +9,13 @@ currently serves. Earlier alphas are deliberately not reconstructed: entries are
 in the same commit as the work they describe, and inventing the ones that
 predate this file would be a worse record than not having them.
 
+## Unreleased
+
+### Added
+
+- `IdentityApiClient.getDeclaredSettings(host?)`: the person's settings as declared, each key with the value in force and
+  the person's own (null when they set none), so a reader can tell a chosen value from the installation's.
+
 ## 2.0.0-alpha.7 - 2026-11-17
 
 ### Changed

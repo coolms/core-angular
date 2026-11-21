@@ -59,4 +59,17 @@ describe('IdentityApiClient -- one settings read for the callers that ask togeth
         client.getSettings().subscribe();
         http.expectOne(SETTINGS).flush({});
     });
+
+    it('the declared settings: each key with the value in force and the person's own, for the host asked', () => {
+        let region: unknown;
+        client.getDeclaredSettings('console').subscribe(sections => (region = sections.find(s => s.section === 'region')));
+
+        const read = http.expectOne(SETTINGS + '/declared?host=console');
+        expect(read.request.headers.get('Accept')).toBe('application/json');
+        read.flush([{ section: 'region', keys: [{ key: 'dateFormat', value: 'dd/MM/yyyy', own: 'dd/MM/yyyy', locked: false }] }]);
+
+        expect(region).toEqual({ section: 'region', keys: [{ key: 'dateFormat', value: 'dd/MM/yyyy', own: 'dd/MM/yyyy', locked: false }] });
+        client.getDeclaredSettings().subscribe();
+        http.expectOne(SETTINGS + '/declared').flush([]);
+    });
 });

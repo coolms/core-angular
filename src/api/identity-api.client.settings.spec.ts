@@ -60,7 +60,7 @@ describe('IdentityApiClient -- one settings read for the callers that ask togeth
         http.expectOne(SETTINGS).flush({});
     });
 
-    it('the declared settings: each key with the value in force and the person's own, for the host asked', () => {
+    it("the declared settings: each key with the value in force and the person's own, for the host asked", () => {
         let region: unknown;
         client.getDeclaredSettings('console').subscribe(sections => (region = sections.find(s => s.section === 'region')));
 

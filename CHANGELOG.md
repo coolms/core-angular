@@ -11,6 +11,7 @@ predate this file would be a worse record than not having them.
 
 ## Unreleased
 
+- The elevation state's ended reasons include `factor_reset`: the person's second factor was reset on the server, which ends every live elevation they hold (`ElevationEndedReason`).
 - `NaviGraphService` runs the shared condition cases (design tokens' `contract/conditions.json` at v0.28.0, pinned beside its spec with its origin): every case through the evaluator, unchanged. The `cn` operator (a list holding the value, strictly equal, never a substring); an `and` or `or` whose value is not a list never holds, as an unknown operator does not.
 
 ## 2.0.0-alpha.8 - 2026-11-21

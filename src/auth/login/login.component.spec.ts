@@ -113,6 +113,28 @@ describe('LoginComponent', () => {
         expect(text(harness)).toContain(LoginComponent.SIGN_IN_AGAIN);
     });
 
+    it('says the account is ready when the page is opened with ready=1', async () => {
+        configure(null);
+        const harness = await RouterTestingHarness.create('/login?ready=1');
+        harness.detectChanges();
+
+        expect(text(harness)).toContain(LoginComponent.ACCOUNT_READY);
+        expect(harness.routeNativeElement?.querySelector('[role="status"]')).not.toBeNull();
+    });
+
+    it('says nothing of a ready account without ready=1', async () => {
+        configure(null);
+        const harness = await RouterTestingHarness.create('/login?ready=1');
+        harness.detectChanges();
+        expect(text(harness)).toContain(LoginComponent.ACCOUNT_READY);
+        // The page is reused as its query changes: each answer is read again.
+        for (const url of ['/login', '/login?ready=0', '/login?ready=yes']) {
+            await harness.navigateByUrl(url);
+            harness.detectChanges();
+            expect(text(harness)).withContext(url).not.toContain(LoginComponent.ACCOUNT_READY);
+        }
+    });
+
     it('says so when the page is opened with the reason', async () => {
         configure(null);
         const harness = await RouterTestingHarness.create('/login?reason=' + ConsoleAccessService.REFUSED_REASON);

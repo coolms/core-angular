@@ -16,6 +16,7 @@ import { ConsoleAccessService } from '../../bootstrap/console-access.service';
 })
 export class LoginComponent {
     identifier = '';
+    readonly accountReady = LoginComponent.ACCOUNT_READY;
     password = '';
 
     // !! SIGNALS, not fields. Angular 22 renders a component that names no change-detection
@@ -28,6 +29,8 @@ export class LoginComponent {
     // clean view.
     readonly loading = signal(false);
     readonly error   = signal<string | null>(null);
+    /** The page was opened after an invitation was accepted (`ready=1`). */
+    readonly ready   = signal(false);
 
     private readonly store  = inject(Store);
     private readonly router = inject(Router);
@@ -38,10 +41,14 @@ export class LoginComponent {
     /** Shown when a sign-in from before audiences was ended: it names no interface, and a new one will. */
     static readonly SIGN_IN_AGAIN = 'Please sign in again.';
 
+    /** Shown when the page is opened with `ready=1`, after an invitation was accepted. */
+    static readonly ACCOUNT_READY = 'Your account is ready; sign in with your new password.';
+
     constructor() {
         // Observed, not read once: after a sign-in the guard's redirect lands on this same
         // page, and the component is reused rather than made again.
         inject(ActivatedRoute).queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+            this.ready.set(params.get('ready') === '1');
             const reason = params.get('reason');
             if (ConsoleAccessService.REFUSED_REASON === reason) {
                 this.loading.set(false);

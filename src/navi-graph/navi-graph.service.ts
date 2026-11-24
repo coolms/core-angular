@@ -104,14 +104,19 @@ export class NaviGraphService {
         return this.evalCondition(showWhen, record);
     }
 
+    private isCondition(value: unknown): value is Record<string, unknown> {
+        return value !== null && typeof value === 'object' && !Array.isArray(value);
+    }
+
     private evalCondition(cond: Record<string, unknown>, record: Record<string, unknown>): boolean {
+        // A value that is not a list never holds, as an unknown operator does not.
         if ('and' in cond) {
-            return (cond['and'] as Record<string, unknown>[])
-                .every(c => this.evalCondition(c, record));
+            const parts = cond['and'];
+            return Array.isArray(parts) && parts.every(c => this.isCondition(c) && this.evalCondition(c, record));
         }
         if ('or' in cond) {
-            return (cond['or'] as Record<string, unknown>[])
-                .some(c => this.evalCondition(c, record));
+            const parts = cond['or'];
+            return Array.isArray(parts) && parts.some(c => this.isCondition(c) && this.evalCondition(c, record));
         }
         // Strict missing-field semantics. A leaf predicate
         // referencing a field absent from the record evaluates to
@@ -127,6 +132,8 @@ export class NaviGraphService {
             case 'ne':  return val !== cond['value'];
             case 'in':  return Array.isArray(cond['value']) && (cond['value'] as unknown[]).includes(val);
             case 'nin': return Array.isArray(cond['value']) && !(cond['value'] as unknown[]).includes(val);
+            // A member of a list: the field is a list holding the value, strictly equal; never a substring.
+            case 'cn':  return Array.isArray(val) && val.some(item => item === cond['value']);
             // Prefix match for strings -- primary use case is filtering
             // actions by MIME-type major (e.g., "image/" matches all
             // image MIMEs without enumerating each subtype).

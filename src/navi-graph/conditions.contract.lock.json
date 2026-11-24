@@ -1,0 +1,8 @@
+{
+  "$comment": "Where conditions.contract.json comes from: design-tokens contract/conditions.json at this tag, byte for byte (sha256). Moved only with the tag.",
+  "repository": "coolms/design-tokens",
+  "tag": "v0.28.0",
+  "commit": "a904091eccc1e3669af1da689cb61b86a7141573",
+  "path": "contract/conditions.json",
+  "sha256": "274aa89baf4b65e87d8e535a322b56df911752a3e902d64385a7774fd5853f09"
+}

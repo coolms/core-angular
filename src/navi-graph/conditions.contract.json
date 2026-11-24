@@ -1,0 +1,703 @@
+{
+  "$comment": "The cases every NaviGraph condition evaluator runs (showWhen, disabledWhen, busyWhen, activeWhen): the backend's, core-angular's NaviGraphService and the workspace api-client's. Each case is a condition, a record and whether it holds. A leaf is { field, op, value }; and/or take a list of conditions. A field missing from the record never holds, whatever the operator; an unknown operator never holds. A new operator comes with its cases here, in the same change as its evaluators.",
+  "version": "1.1.0",
+  "operators": [
+    "eq",
+    "ne",
+    "in",
+    "nin",
+    "startsWith",
+    "cn"
+  ],
+  "cases": [
+    {
+      "name": "eq: the same value holds",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": "x"
+      },
+      "record": {
+        "a": "x"
+      },
+      "holds": true
+    },
+    {
+      "name": "eq: another value does not",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": "x"
+      },
+      "record": {
+        "a": "y"
+      },
+      "holds": false
+    },
+    {
+      "name": "eq: strict, a number is not its string",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": 1
+      },
+      "record": {
+        "a": "1"
+      },
+      "holds": false
+    },
+    {
+      "name": "eq: true is true",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": true
+      },
+      "record": {
+        "a": true
+      },
+      "holds": true
+    },
+    {
+      "name": "eq: false is not missing",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": false
+      },
+      "record": {
+        "a": false
+      },
+      "holds": true
+    },
+    {
+      "name": "eq: a null field equals null",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": null
+      },
+      "record": {
+        "a": null
+      },
+      "holds": true
+    },
+    {
+      "name": "eq: a missing field never holds, even for null",
+      "condition": {
+        "field": "a",
+        "op": "eq",
+        "value": null
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "ne: another value holds",
+      "condition": {
+        "field": "a",
+        "op": "ne",
+        "value": "x"
+      },
+      "record": {
+        "a": "y"
+      },
+      "holds": true
+    },
+    {
+      "name": "ne: the same value does not",
+      "condition": {
+        "field": "a",
+        "op": "ne",
+        "value": "x"
+      },
+      "record": {
+        "a": "x"
+      },
+      "holds": false
+    },
+    {
+      "name": "ne: a missing field never holds",
+      "condition": {
+        "field": "a",
+        "op": "ne",
+        "value": "x"
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "in: a member of the list holds",
+      "condition": {
+        "field": "a",
+        "op": "in",
+        "value": [
+          "x",
+          "y"
+        ]
+      },
+      "record": {
+        "a": "y"
+      },
+      "holds": true
+    },
+    {
+      "name": "in: a value not in the list does not",
+      "condition": {
+        "field": "a",
+        "op": "in",
+        "value": [
+          "x",
+          "y"
+        ]
+      },
+      "record": {
+        "a": "z"
+      },
+      "holds": false
+    },
+    {
+      "name": "in: strict, a number is not its string",
+      "condition": {
+        "field": "a",
+        "op": "in",
+        "value": [
+          "1"
+        ]
+      },
+      "record": {
+        "a": 1
+      },
+      "holds": false
+    },
+    {
+      "name": "in: a value that is not a list never holds",
+      "condition": {
+        "field": "a",
+        "op": "in",
+        "value": "xy"
+      },
+      "record": {
+        "a": "x"
+      },
+      "holds": false
+    },
+    {
+      "name": "in: a missing field never holds",
+      "condition": {
+        "field": "a",
+        "op": "in",
+        "value": [
+          "x"
+        ]
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "nin: a value not in the list holds",
+      "condition": {
+        "field": "a",
+        "op": "nin",
+        "value": [
+          "x",
+          "y"
+        ]
+      },
+      "record": {
+        "a": "z"
+      },
+      "holds": true
+    },
+    {
+      "name": "nin: a member of the list does not",
+      "condition": {
+        "field": "a",
+        "op": "nin",
+        "value": [
+          "x",
+          "y"
+        ]
+      },
+      "record": {
+        "a": "x"
+      },
+      "holds": false
+    },
+    {
+      "name": "nin: a value that is not a list never holds",
+      "condition": {
+        "field": "a",
+        "op": "nin",
+        "value": "xy"
+      },
+      "record": {
+        "a": "z"
+      },
+      "holds": false
+    },
+    {
+      "name": "nin: a missing field never holds",
+      "condition": {
+        "field": "a",
+        "op": "nin",
+        "value": [
+          "x"
+        ]
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "startsWith: a prefix holds",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": "image/"
+      },
+      "record": {
+        "mime": "image/png"
+      },
+      "holds": true
+    },
+    {
+      "name": "startsWith: another prefix does not",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": "image/"
+      },
+      "record": {
+        "mime": "text/plain"
+      },
+      "holds": false
+    },
+    {
+      "name": "startsWith: a field that is not a string never holds",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": "1"
+      },
+      "record": {
+        "mime": 12
+      },
+      "holds": false
+    },
+    {
+      "name": "startsWith: a value that is not a string never holds",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": 1
+      },
+      "record": {
+        "mime": "12"
+      },
+      "holds": false
+    },
+    {
+      "name": "startsWith: an empty prefix holds for any string",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": ""
+      },
+      "record": {
+        "mime": "text/plain"
+      },
+      "holds": true
+    },
+    {
+      "name": "startsWith: a missing field never holds",
+      "condition": {
+        "field": "mime",
+        "op": "startsWith",
+        "value": "image/"
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "an unknown operator never holds",
+      "condition": {
+        "field": "a",
+        "op": "equals",
+        "value": "x"
+      },
+      "record": {
+        "a": "x"
+      },
+      "holds": false
+    },
+    {
+      "name": "and: every part holding holds",
+      "condition": {
+        "and": [
+          {
+            "field": "a",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": 2
+          }
+        ]
+      },
+      "record": {
+        "a": 1,
+        "b": 2
+      },
+      "holds": true
+    },
+    {
+      "name": "and: one part failing fails",
+      "condition": {
+        "and": [
+          {
+            "field": "a",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": 2
+          }
+        ]
+      },
+      "record": {
+        "a": 1,
+        "b": 3
+      },
+      "holds": false
+    },
+    {
+      "name": "and: a part on a missing field fails",
+      "condition": {
+        "and": [
+          {
+            "field": "a",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "b",
+            "op": "ne",
+            "value": 2
+          }
+        ]
+      },
+      "record": {
+        "a": 1
+      },
+      "holds": false
+    },
+    {
+      "name": "and: no parts holds",
+      "condition": {
+        "and": []
+      },
+      "record": {},
+      "holds": true
+    },
+    {
+      "name": "or: one part holding holds",
+      "condition": {
+        "or": [
+          {
+            "field": "a",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": 2
+          }
+        ]
+      },
+      "record": {
+        "a": 9,
+        "b": 2
+      },
+      "holds": true
+    },
+    {
+      "name": "or: no part holding fails",
+      "condition": {
+        "or": [
+          {
+            "field": "a",
+            "op": "eq",
+            "value": 1
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": 2
+          }
+        ]
+      },
+      "record": {
+        "a": 9,
+        "b": 9
+      },
+      "holds": false
+    },
+    {
+      "name": "or: no parts fails",
+      "condition": {
+        "or": []
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "and: a value that is not a list never holds",
+      "condition": {
+        "and": {
+          "field": "a",
+          "op": "eq",
+          "value": 1
+        }
+      },
+      "record": {
+        "a": 1
+      },
+      "holds": false
+    },
+    {
+      "name": "or: a value that is not a list never holds",
+      "condition": {
+        "or": {
+          "field": "a",
+          "op": "eq",
+          "value": 1
+        }
+      },
+      "record": {
+        "a": 1
+      },
+      "holds": false
+    },
+    {
+      "name": "and inside or",
+      "condition": {
+        "or": [
+          {
+            "and": [
+              {
+                "field": "a",
+                "op": "eq",
+                "value": 1
+              },
+              {
+                "field": "b",
+                "op": "eq",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "field": "c",
+            "op": "eq",
+            "value": 3
+          }
+        ]
+      },
+      "record": {
+        "a": 1,
+        "b": 2,
+        "c": 0
+      },
+      "holds": true
+    },
+    {
+      "name": "or inside and",
+      "condition": {
+        "and": [
+          {
+            "field": "_surface",
+            "op": "eq",
+            "value": "toolbar"
+          },
+          {
+            "or": [
+              {
+                "field": "_context",
+                "op": "eq",
+                "value": "background"
+              },
+              {
+                "field": "_hasFolder",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "record": {
+        "_surface": "toolbar",
+        "_context": "node",
+        "_hasFolder": false
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: a list holding the value holds",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {
+        "a": [
+          "w",
+          "x"
+        ]
+      },
+      "holds": true
+    },
+    {
+      "name": "cn: a list without the value does not hold",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {
+        "a": [
+          "w",
+          "y"
+        ]
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: an empty list does not hold",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {
+        "a": []
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: a missing field does not hold",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {},
+      "holds": false
+    },
+    {
+      "name": "cn: a null field does not hold",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {
+        "a": null
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: a string field never holds, not even when it contains the value",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "x"
+      },
+      "record": {
+        "a": "xyz"
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: an item that only begins with the value does not hold",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "document.word"
+      },
+      "record": {
+        "a": [
+          "document.word-document"
+        ]
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: equality is strict (the number 1 is not the string 1)",
+      "condition": {
+        "field": "a",
+        "op": "cn",
+        "value": "1"
+      },
+      "record": {
+        "a": [
+          1
+        ]
+      },
+      "holds": false
+    },
+    {
+      "name": "cn: inside and",
+      "condition": {
+        "and": [
+          {
+            "field": "a",
+            "op": "cn",
+            "value": "x"
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": true
+          }
+        ]
+      },
+      "record": {
+        "a": [
+          "x"
+        ],
+        "b": true
+      },
+      "holds": true
+    },
+    {
+      "name": "cn: inside or, the other branch failing",
+      "condition": {
+        "or": [
+          {
+            "field": "a",
+            "op": "cn",
+            "value": "z"
+          },
+          {
+            "field": "b",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "record": {
+        "a": [
+          "x"
+        ],
+        "b": true
+      },
+      "holds": false
+    }
+  ]
+}

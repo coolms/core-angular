@@ -37,13 +37,15 @@ export interface ElevationState {
 /**
  * `closed` is the beacon (the panel was closed or reloaded), `dropped_by_user`
  * the explicit drop, `refresh_from_other_pair` the server's refresh tripwire,
- * `never` a session that has not elevated yet.
+ * `factor_reset` the person's second factor reset on the server, which ends
+ * every live elevation they hold, `never` a session that has not elevated yet.
  */
 export type ElevationEndedReason =
     | 'expired'
     | 'closed'
     | 'dropped_by_user'
     | 'refresh_from_other_pair'
+    | 'factor_reset'
     | 'never';
 
 export interface ElevationEnded {
